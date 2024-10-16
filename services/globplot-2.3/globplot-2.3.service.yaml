@@ -1,0 +1,40 @@
+---
+slivka-version: 0.8.3
+name: GlobPlot
+author: Rune Linding
+version: '2.3'
+license: Academic Free License version 1.2
+
+classifiers:
+- 'Topic :: Computational biology :: Sequence analysis'
+- 'Operation :: Analysis :: Sequence analysis :: Protein sequence analysis'
+
+parameters:
+  input:
+    name: Input file
+    type: file
+    required: true
+    media-type: application/fasta
+
+command:
+- GlobPipe
+
+args:
+  input:
+    arg: $(value)
+    symlink: input.fasta
+
+outputs:
+  output:
+    path: stdout
+    media-type: text/plain
+  error-log:
+    path: stderr
+    media-type: text/plain
+
+tests:
+- applicable-runners: ["default"]
+  parameters:
+    input: ${DIRNAME}/testdata/uniref50.fa
+  timeout: 5
+...
