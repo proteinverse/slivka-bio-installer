@@ -1,0 +1,43 @@
+---
+slivka-version: 0.8.3
+name: DisEMBL
+author: Rune Linding, Lars Juhl Jensen
+version: '1.4'
+license: GNU GPL ver. 2
+
+classifiers:
+- 'Topic :: Computational biology :: Sequence analysis'
+- 'Operation :: Analysis :: Sequence analysis :: Protein sequence analysis'
+
+parameters:
+  input:
+    name: Input file
+    type: file
+    required: true
+    media-type: application/fasta
+
+command:
+- DisEMBL
+
+args:
+  input:
+    arg: $(value)
+
+outputs:
+  output:
+    path: stdout
+    media-type: text/plain
+  error-log:
+    path: stderr
+    media-type: text/plain
+
+tests:
+- applicable-runners: ["default"]
+  parameters:
+    input: "{{ testdata }}/uniref50.fa"
+  timeout: 5
+
+execution:
+  runners:
+    default: !include _profiles.yaml::default
+...

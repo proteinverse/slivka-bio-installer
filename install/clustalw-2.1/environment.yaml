@@ -1,0 +1,7 @@
+name: clustalw-2.1
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bioconda::clustalw=2.1

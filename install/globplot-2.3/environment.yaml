@@ -1,0 +1,8 @@
+name: globplot-2.3
+channels:
+  - bartongroup
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bartongroup::globplot=2.3

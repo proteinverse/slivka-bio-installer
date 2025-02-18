@@ -1,0 +1,8 @@
+name: mafft-7.458
+channels:
+  - bioconda
+  - conda-forge
+  - nodefaults
+dependencies:
+  - bioconda::fasta3=36.3.8
+  - bioconda::mafft=7.458
