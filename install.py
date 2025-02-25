@@ -35,11 +35,19 @@ def main(conda_exe, services, path: Path):
 
     services_to_install = [
         service_dir.resolve()
-        for service_dir in path.joinpath("install").iterdir()
+        for service_dir in Path.cwd().joinpath("install").iterdir()
         for name in services
         if service_dir.stem.startswith(name) and next(service_dir.glob("*.service.yaml"), False)
     ]
-    click.echo(services_to_install)
+    for service_path in services_to_install:
+        try:
+            conda_env = install_conda(path, service_path, conda_exe)
+            command_prefix = [conda_exe, "run", "-p", str(conda_env)]
+            output_file = install_service(path, service_path, command_prefix)
+            click.echo(f"Service installed: {output_file.name}")
+        except Exception as e:
+            click.echo(f"Failed to install: {service_path.name}")
+            click.echo(e)
 
 
 def _iter_conda_exe():
