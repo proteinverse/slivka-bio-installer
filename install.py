@@ -26,7 +26,7 @@ class TemplateYamlLoader(YAML):
 @click.argument("path", type=Path)
 def main(conda_exe, services, path: Path):
     try:
-        conda_exe = next(filter(None, _iter_conda_exe()))
+        conda_exe = conda_exe or next(filter(None, _iter_conda_exe()))
     except StopIteration:
         raise click.Abort("No conda environment specified!") from None
     click.echo(f"Using conda: '{conda_exe}'")
@@ -57,7 +57,7 @@ def install_conda(slivka_path: Path, service_path: Path, conda_exe: str):
             conda_exe, "env", "create",
             "--prefix", env_path,
             "--file", env_file_path,
-            "--yes", "--dry-run"
+            "--yes"
         ]
     )
     proc.check_returncode()
