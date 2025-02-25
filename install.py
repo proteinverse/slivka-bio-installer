@@ -33,6 +33,10 @@ def main(conda_exe, services, path: Path):
         raise click.Abort("No conda environment specified!") from None
     click.echo(f"Using conda: '{conda_exe}'")
 
+    path.mkdir(exist_ok=True)
+
+    install_shared(path)
+
     services_to_install = [
         service_dir.resolve()
         for service_dir in Path.cwd().joinpath("install").iterdir()
@@ -56,6 +60,21 @@ def _iter_conda_exe():
     yield shutil.which("micromamba")
     yield shutil.which("mamba")
     yield shutil.which("conda")
+
+
+def install_shared(slivka_path: Path):
+    shared_dir = Path.cwd() / "shared"
+    for root, dirs, files in os.walk(shared_dir):
+        root = Path(root)
+        rel_root: Path = root.relative_to(shared_dir)
+        for dirname in dirs:
+            (slivka_path / rel_root / dirname).mkdir(exist_ok=True)
+        for filename in files:
+            target_file = slivka_path / rel_root / filename
+            if not target_file.exists():
+                shutil.copy2(root / filename, target_file)
+            else:
+                click.echo(f"File exists: {target_file}")
 
 
 def install_conda(slivka_path: Path, service_path: Path, conda_exe: str):
