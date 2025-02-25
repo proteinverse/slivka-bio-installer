@@ -67,6 +67,11 @@ def install_conda(slivka_path: Path, service_path: Path, conda_exe: str):
 def install_service(slivka_path: Path, service_path: Path, prepend_command=[]):
     service_full_name = service_path.name
     service_template_path = next(service_path.glob("*.service.yaml"))
+
+    data_dirs = filter(Path.is_dir, service_path.iterdir())
+    for data_dir in data_dirs:
+        shutil.copytree(data_dir, slivka_path / data_dir.name / service_full_name)
+
     yaml = TemplateYamlLoader({
         "data": f"${{SLIVKA_HOME}}/data/{service_full_name}",
         "testdata": f"${{SLIVKA_HOME}}/testdata/{service_full_name}"
