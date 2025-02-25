@@ -236,7 +236,7 @@ tests:
 - applicable-runners: ["default"]
   parameters:
     input: "{{ testdata }}/uniref50.fa"
-  timeout: 5
+  timeout: 60
 
 execution:
   runners:

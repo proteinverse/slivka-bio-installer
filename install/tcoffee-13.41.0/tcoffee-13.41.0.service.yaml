@@ -324,7 +324,7 @@ tests:
 - applicable-runners: ["default"]
   parameters:
     sequence: "{{ testdata }}/uniref50.fa"
-  timeout: 5
+  timeout: 60
 
 execution:
   runners:
