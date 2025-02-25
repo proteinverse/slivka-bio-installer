@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,11 +14,12 @@ class TemplateYamlLoader(YAML):
         self._mapping = mapping
         self.Constructor.add_constructor('tag:yaml.org,2002:str', self.replace_placeholder)
     
+    def _match_repl(self, match):
+        return self._mapping[match.group(1)]
+
     def replace_placeholder(self, loader, node):
         value = loader.construct_scalar(node)
-        for key, val in self._mapping.items():
-            value = value.replace(f"{{{{ {key} }}}}", val)
-        return value
+        return re.sub(r'\{\{ ?(\w+) ?\}\}', self._match_repl, value)
 
 
 @click.command()
@@ -69,13 +71,13 @@ def install_service(slivka_path: Path, service_path: Path, prepend_command=[]):
     service_template_path = next(service_path.glob("*.service.yaml"))
 
     data_dirs = filter(Path.is_dir, service_path.iterdir())
+    template_dict = {}
     for data_dir in data_dirs:
-        shutil.copytree(data_dir, slivka_path / data_dir.name / service_full_name)
+        target_dir = slivka_path / data_dir.name / service_full_name
+        shutil.copytree(data_dir, target_dir)
+        template_dict[data_dir.name] = os.path.join("${SLIVKA_HOME}", data_dir.name, service_full_name)
 
-    yaml = TemplateYamlLoader({
-        "data": f"${{SLIVKA_HOME}}/data/{service_full_name}",
-        "testdata": f"${{SLIVKA_HOME}}/testdata/{service_full_name}"
-    })
+    yaml = TemplateYamlLoader(template_dict)
     service_config = yaml.load(service_template_path)
     service_config["command"] = [*prepend_command, *service_config["command"]]
     services_dir = slivka_path / "services"
