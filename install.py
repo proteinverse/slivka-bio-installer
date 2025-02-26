@@ -33,8 +33,7 @@ def main(conda_exe, services, path: Path):
         raise click.Abort("No conda environment specified!") from None
     click.echo(f"Using conda: '{conda_exe}'")
 
-    path.mkdir(exist_ok=True)
-
+    install_slivka(path)
     install_shared(path)
 
     services_to_install = [
@@ -60,6 +59,10 @@ def _iter_conda_exe():
     yield shutil.which("micromamba")
     yield shutil.which("mamba")
     yield shutil.which("conda")
+
+
+def install_slivka(slivka_path: Path):
+    subprocess.run(["slivka", "init", slivka_path])
 
 
 def install_shared(slivka_path: Path):
