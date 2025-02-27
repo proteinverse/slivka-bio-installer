@@ -89,7 +89,7 @@ def install_conda(slivka_path: Path, service_path: Path, conda_exe: str):
             conda_exe, "env", "create",
             "--prefix", env_path,
             "--file", env_file_path,
-            "--yes"
+            "--yes", "--quiet"
         ]
     )
     proc.check_returncode()
