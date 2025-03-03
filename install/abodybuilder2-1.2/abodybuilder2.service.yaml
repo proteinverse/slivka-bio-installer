@@ -1,0 +1,85 @@
+---
+slivka-version: "0.8.3"
+name: ABodyBuilder2
+description: Antibody structure prediction using ImmuneBuilder.
+author: Oxford Protein Informatics Group
+version: "1.2"
+license: BSD-3-Clause license
+classifiers:
+  - 'Topic :: Computational biology :: Sequence analysis'
+
+parameters:
+  light:
+    type: text
+    name: Light chain
+    description: Light chain amino acid sequence
+    required: no
+  heavy:
+    type: text
+    name: Heavy chain
+    description: Heavy chain amino acid sequence
+    required: no
+  fasta:
+    type: file
+    name: Fasta file
+    description: Fasta file containing a heavy amd light chain named H and L
+    required: no
+
+  scheme:
+    type: choice
+    name: Numbering scheme
+    description: The scheme used to number output antibody structures. Available numbering schemes are- imgt, chothia, kabat, aho, wolfguy, martin and raw. Default is imgt
+    required: no
+    choices:
+      IMGT: imgt
+      Chothia: chothia
+      Kabat: kabat
+      AHo: aho
+      Wolfguy: wolfguy
+      Martin: martin
+      Raw: raw
+
+  sidechain_check:
+    type: flag
+    name: Side chain bond check
+    description: Don't check for strained bonds. This is a bit faster but will rarely generate unphysical side chains
+    required: no
+
+# run the script with python; environment variables are supported
+command: 
+- ABodyBuilder2
+- -v
+
+args:
+  light:
+    arg: --light_sequence $(value)
+  heavy:
+    arg: --heavy_sequence $(value)
+  scheme:
+    arg: --numbering_scheme $(value)
+  fasta:
+    arg: --fasta_file $(value)
+    symlink: input.fasta
+  sidechain_check:
+    arg: --no_sidechain_bond_check
+
+outputs:
+  log:
+    # standard output and error streams are automatically redirected
+    # to stdout and stderr files respectively
+    path: stdout
+    name: Output Log
+    media-type: text/plain
+  error-log:
+    path: stderr
+    name: Error Log
+    media-type: text/plain
+  prediction:
+    path: 'ABodyBuilder2_output.pdb'
+    name: Top ranked refined model
+    media-type: chemical/x-pdb
+
+execution:
+  runners:
+    default: !include _profiles.yaml::default-gpu
+...
