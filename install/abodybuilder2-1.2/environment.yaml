@@ -3,6 +3,7 @@ channels:
   - pytorch
   - bioconda
   - conda-forge
+  - nodefaults
 dependencies:
   - anarci=2024.05.21
   - biopython=1.85
