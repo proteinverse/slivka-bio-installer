@@ -1,0 +1,3 @@
+[submodule "install/mpnn_design_residues-1.0.1/src"]
+	path = install/mpnn_design_residues-1.0.1/src
+	url = https://github.com/dauparas/ProteinMPNN.git

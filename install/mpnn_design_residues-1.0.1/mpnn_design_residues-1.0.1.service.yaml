@@ -1,0 +1,125 @@
+---
+slivka-version: "0.8"
+name: ProteinMPNN - full chains design
+description: Design of whole protein chains via ProteinMPNN
+author: 'J. Dauparas, I. Anishchenko, N.Bennett, H.Bai, R.J.Ragotte, L.F.Milles, B.I.M.Wicky, A. Courbet,
+R.J.deHaas, N.Bethel, P.J.Y.Leung, T.F.Huddy, S.Pellock, D.Tischer, F. Chan, B.Koepnick, H.Nguyen, A.Kang,
+B. Sankaran, A.K.Bera, N.P.King & D. Baker'
+version: "1.0.1"
+license: "MIT"
+
+parameters:
+  input:
+    type: file
+    media-type: chemical/x-pdb
+    name: Input file
+    description: Seed structure for design (PDB format)
+    required: true
+
+  chains_to_design:
+    type: string
+    name: Chains to Design
+    description: Chains id to be designed. Format is "<chain1> <chain2> <chainN>"
+    required: true
+
+  design_positions:
+    type: string
+    name: Design Positions
+    description: Residue position indexes to be designed. Format is "<res1_ch1> <resNch1>, <res1_chN> <resN_chN>"
+    required: false
+
+  num_seq_per_target:
+    type: int
+    name: Number of sequences per target
+    description: Number of sequences to generate per target
+    required: false
+    default: 1
+
+  sampling_temp:
+    type: string
+    name: Sampling Temperature
+    description: A string of temperatures, 0.2 0.25 0.5. Sampling temperature for amino acids with higher temperatures leading to higher diversity
+    required: false
+    default: 0.1
+
+  seed:
+    type: int
+    name: Seed
+    description: If set to 0 then a random seed will be picked
+    required: false
+    default: 0
+
+  batch_size:
+    type: int
+    name: Batch Size
+    description: Batch size; can set higher for titan, quadro GPUs, reduce this if running out of GPU memory
+    required: false
+    default: 1
+
+  backbone_noise:
+    type: float
+    name: Backbone Noise
+    description: Standard deviation of Gaussian noise to add to backbone atoms (recommended for AF models)
+    required: false
+    default: 0.00
+
+  save_probs:
+    type: boolean
+    name: Save Probabilities
+    description: AA probabilities per designed position. Set to 1 to create the probabilities output
+    required: false
+    default: false
+
+
+command:
+- bash
+- "{{ scripts }}/mpnn_design_residues.sh"
+
+env:
+  PYTHON_EXE: python3
+  PROTEIN_MPNN: "{{ src }}"
+
+args:
+  input:
+    arg: -i $(value)
+  chains_to_design:
+    arg: -c "$(value)"
+  design_positions:
+    arg: -d "$(value)"
+  num_seq_per_target:
+    arg: -n $(value)
+  sampling_temp:
+    arg: -t $(value)
+  seed:
+    arg: -s $(value)
+  batch_size:
+    arg: -b $(value)
+  backbone_noise:
+    arg: -z $(value)
+  save_probs:
+    arg: -p 1
+
+
+outputs:
+  log:
+    path: stdout
+    name: Standard Log
+    media-type: text/plain
+  error-log:
+    path: stderr
+    name: Error Log
+    media-type: text/plain
+  output:
+    path: "output/seqs/*.fa"
+    name: Output design file
+    media-type: application/fasta
+  output-aa-probs:
+    path: "output/probs/*.npz"
+    name: Output per-position probabilities (when save_probs is selected)
+    media-type: application/octet-stream
+
+
+execution:
+  runners:
+    default: !include _profiles.yaml::default-gpu
+...
