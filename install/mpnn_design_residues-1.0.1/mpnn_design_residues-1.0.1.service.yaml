@@ -26,7 +26,7 @@ parameters:
     type: string
     name: Design Positions
     description: Residue position indexes to be designed. Format is "<res1_ch1> <resNch1>, <res1_chN> <resN_chN>"
-    required: false
+    required: true
 
   num_seq_per_target:
     type: int
