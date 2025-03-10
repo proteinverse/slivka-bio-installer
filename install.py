@@ -50,7 +50,7 @@ def main(conda_exe, services, path: Path):
             click.echo(f"Service installed: {output_file.name}")
         except Exception as e:
             click.echo(f"Failed to install: {service_path.name}")
-            click.echo(e)
+            click.echo(f"{type(e).__name__}: {e}")
 
 
 def _iter_conda_exe():
@@ -84,6 +84,9 @@ def install_conda(slivka_path: Path, service_path: Path, conda_exe: str):
     service_full_name = service_path.name
     env_file_path = service_path / "environment.yaml"
     env_path = slivka_path.joinpath("conda_env", service_full_name).resolve()
+    if env_path.exists():
+        click.echo(f"Conda env already exists: {env_path}. Skipping.")
+        return env_path
     proc = subprocess.run(
         [
             conda_exe, "env", "create",
@@ -104,8 +107,10 @@ def install_service(slivka_path: Path, service_path: Path, prepend_command=[]):
     template_dict = {}
     for data_dir in data_dirs:
         target_dir = slivka_path / data_dir.name / service_full_name
-        shutil.copytree(data_dir, target_dir)
-        template_dict[data_dir.name] = os.path.join("${SLIVKA_HOME}", data_dir.name, service_full_name)
+        if not target_dir.exists():
+            click.echo(f"Directory exists: {target_dir}. Skipping.")
+            shutil.copytree(data_dir, target_dir)
+        template_dict[f"dir:{data_dir.name}"] = os.path.join("${SLIVKA_HOME}", data_dir.name, service_full_name)
 
     yaml = TemplateYamlLoader(template_dict)
     service_config = yaml.load(service_template_path)
