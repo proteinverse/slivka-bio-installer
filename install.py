@@ -19,7 +19,7 @@ class TemplateYamlLoader(YAML):
 
     def replace_placeholder(self, loader, node):
         value = loader.construct_scalar(node)
-        return re.sub(r'\{\{ ?(\w+) ?\}\}', self._match_repl, value)
+        return re.sub(r'\{\{ ?(\w+:[\w\/\.]+) ?\}\}', self._match_repl, value)
 
 
 @click.command()

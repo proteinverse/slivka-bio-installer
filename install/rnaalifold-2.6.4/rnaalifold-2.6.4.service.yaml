@@ -197,7 +197,7 @@ outputs:
 tests:
 - applicable-runners: ["default"]
   parameters:
-    infile: "{{ testdata }}/rna_sequence.clustal"
+    infile: "{{ dir:testdata }}/rna_sequence.clustal"
   timeout: 60
 
 execution:

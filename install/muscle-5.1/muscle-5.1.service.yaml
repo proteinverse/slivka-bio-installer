@@ -98,7 +98,7 @@ outputs:
 tests:
 - applicable-runners: ["default"]
   parameters:
-    input: "{{ testdata }}/uniref50.fa"
+    input: "{{ dir:testdata }}/uniref50.fa"
     algorithm: align
     _output: aln.fa
   timeout: 60

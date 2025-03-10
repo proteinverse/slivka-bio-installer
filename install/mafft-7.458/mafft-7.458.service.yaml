@@ -303,7 +303,7 @@ args:
   local-gap-open-penalty:
     arg: --lop $(value)
   matrix:
-    arg: --aamatrix {{ data }}/matrices/$(value)
+    arg: --aamatrix {{ dir:data }}/matrices/$(value)
   input:
     arg: $(value)
 
@@ -321,7 +321,7 @@ outputs:
 tests:
 - applicable-runners: ["default"]
   parameters:
-    input: "{{ testdata }}/uniref50.fa"
+    input: "{{ dir:testdata }}/uniref50.fa"
   timeout: 60
 
 execution:

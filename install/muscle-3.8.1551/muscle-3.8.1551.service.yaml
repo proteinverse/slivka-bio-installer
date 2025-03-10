@@ -384,7 +384,7 @@ args:
   anchor-spacing:
     arg: -anchorspacing $(value)
   matrix:
-    arg: -matrix {{ data }}/matrices/$(value)
+    arg: -matrix {{ dir:data }}/matrices/$(value)
   gap-open:
     arg: -gapopen $(value)
   gap-extension:
@@ -424,7 +424,7 @@ outputs:
 tests:
 - applicable-runners: ["default"]
   parameters:
-    input: "{{ testdata }}/uniref50.fa"
+    input: "{{ dir:testdata }}/uniref50.fa"
   timeout: 60
 
 execution:
