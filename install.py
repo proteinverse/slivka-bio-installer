@@ -203,7 +203,8 @@ class DockerInstaller:
             )
 
     def get_command_prefix(self, image_tag):
-        return ["docker", "container", "run", "--rm", image_tag]
+        wrapper_script = os.path.join("${SLIVKA_HOME}", "scripts", "run_with_docker.sh")
+        return ["/usr/bin/env", "bash", wrapper_script, image_tag]
 
 
 def build_docker_image(dockerfile: Path, image_name, image_tag):
