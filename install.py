@@ -91,7 +91,7 @@ def main(conda_exe, services, path: Path):
             if ans == "d": installer = docker_installer
             try:
                 rep = installer.install(service_path)
-                command_prefix = installer.get_command_prefix(rep)
+                command_prefix = installer.get_command_prefix(service_path, rep)
                 retry = False
             except Exception as e:
                 click.echo(f"{type(e).__name__}: {e}")
@@ -142,7 +142,7 @@ class CondaInstaller:
             click.echo(f"Failed to install conda env for {template_path.name}")
             raise
 
-    def get_command_prefix(self, conda_env):
+    def get_command_prefix(self, template_path: Path, conda_env):
         return [self.conda_exe, "run", "-p", str(conda_env)]
 
 
@@ -202,9 +202,18 @@ class DockerInstaller:
                 platform=image_data["platform"]
             )
 
-    def get_command_prefix(self, image_tag):
+    def get_command_prefix(self, template_path: Path, image_tag):
+        data_dirs = iter_data_dirs(template_path, target_root=Path("${SLIVKA_HOME}"))
+        # flatten arg pairs
+        mount_args = sum((('--mount', f"type=bind,src={t},dst={t},ro") for _, t in data_dirs), ())
         wrapper_script = os.path.join("${SLIVKA_HOME}", "scripts", "run_with_docker.sh")
-        return ["/usr/bin/env", "bash", wrapper_script, image_tag]
+        return [
+            "/usr/bin/env",
+            "bash",
+            wrapper_script,
+            *mount_args,
+            image_tag
+        ]
 
 
 def build_docker_image(dockerfile: Path, image_name, image_tag):
@@ -260,10 +269,8 @@ def install_service(slivka_path: Path, service_path: Path, prepend_command=[]):
     service_full_name = service_path.name
     service_template_path = next(service_path.glob("*.service.yaml"))
 
-    data_dirs = filter(Path.is_dir, service_path.iterdir())
     template_dict = {}
-    for data_dir in data_dirs:
-        target_dir = slivka_path / data_dir.name / service_full_name
+    for data_dir, target_dir in iter_data_dirs(service_path, target_root=slivka_path):
         if not target_dir.exists():
             click.echo(f"Directory exists: {target_dir}. Skipping.")
             shutil.copytree(data_dir, target_dir)
@@ -277,6 +284,20 @@ def install_service(slivka_path: Path, service_path: Path, prepend_command=[]):
     dest_file = services_dir / f"{service_full_name}.service.yaml"
     yaml.dump(service_config, dest_file)
     return dest_file
+
+
+def iter_data_dirs(service_path: Path, *, target_root=Path(os.path.curdir)):
+    """
+    Iterates data directories under the given path.
+    Returns tuples of source data directory and target directory
+    the data should be copied to.
+    If target root is not specified, the targets will be relative.
+    """
+    data_dirs_iter = filter(Path.is_dir, service_path.iterdir())
+    return (
+        (data_dir, target_root / data_dir.name / service_path.name)
+        for data_dir in data_dirs_iter
+    )
 
 
 if __name__ == '__main__':
