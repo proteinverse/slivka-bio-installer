@@ -212,7 +212,8 @@ def build_docker_image(dockerfile: Path, image_name, image_tag):
         [
             "docker", "buildx", "build",
             "--tag", full_tag,
-            "."
+            "--file", dockerfile,
+            dockerfile.parent
         ],
         cwd=dockerfile.parent
     )
