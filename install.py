@@ -179,7 +179,7 @@ class DockerInstaller:
         docker_exe = shutil.which("docker")
         if not docker_exe:
             raise Exception("Docker not found.")
-        return DockerInstaller(docker_exe)
+        return DockerInstaller()
 
     def is_applicable_to(self, template_path: Path):
         return (
