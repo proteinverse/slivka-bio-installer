@@ -193,7 +193,8 @@ class DockerInstaller:
             return build_docker_image(
                 template_path / "Dockerfile",
                 image_name=image_data["image"],
-                image_tag=image_data["tag"]
+                image_tag=image_data["tag"],
+                platform=image_data["platform"]
             )
         else:
             return pull_docker_image(
@@ -216,12 +217,13 @@ class DockerInstaller:
         ]
 
 
-def build_docker_image(dockerfile: Path, image_name, image_tag):
+def build_docker_image(dockerfile: Path, image_name, image_tag, platform):
     full_tag = f"{image_name}:{image_tag}"
     proc = subprocess.run(
         [
             "docker", "buildx", "build",
             "--tag", full_tag,
+            "--platform", platform,
             "--file", dockerfile,
             dockerfile.parent
         ],
