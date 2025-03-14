@@ -82,6 +82,7 @@ env:
 args:
   input:
     arg: -i $(value)
+    symlink: input
   chains_to_design:
     arg: -c "$(value)"
   design_positions:

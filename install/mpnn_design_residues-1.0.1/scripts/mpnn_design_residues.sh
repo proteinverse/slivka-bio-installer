@@ -22,7 +22,7 @@ declare -a MPNN_ARGS=()
 while :
 do
   case "$1" in
-    -i | --input_pdb)        cp "$2" $folder_with_pdbs/$(basename "$2").pdb; shift; shift ;;
+    -i | --input_pdb)        cp "$2" $folder_with_pdbs/$(basename "$2" .pdb).pdb; shift; shift ;;
     # chains should have the format "<chain_1> <chain_2> <chain_3>"
     -c | --chains_to_design) chains_to_design="$2"; shift; shift ;;
     # positions should be indexes in the format "<res1_chain1> <res1_chain1> ..., <res1_chain2> <res2_chain2> ..."
