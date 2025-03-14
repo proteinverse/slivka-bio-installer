@@ -17,7 +17,7 @@ mkdir $folder_with_pdbs
 chains_to_design=""
 design_only_positions=""
 
-declare -a MPNN_ARGS
+declare -a MPNN_ARGS=()
 
 while :
 do
