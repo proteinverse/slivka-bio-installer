@@ -50,7 +50,7 @@ def main(conda_exe, services, path: Path):
         service_dir.resolve()
         for service_dir in Path.cwd().joinpath("install").iterdir()
         for name in services
-        if service_dir.stem.startswith(name) and next(service_dir.glob("*.service.yaml"), False)
+        if service_dir.name.startswith(name) and next(service_dir.glob("*.service.yaml"), False)
     ]
     click.echo("Installing:")
     for service_path in sorted(service_paths_to_install):
