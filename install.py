@@ -273,8 +273,11 @@ def install_service(slivka_path: Path, service_path: Path, prepend_command=[]):
 
     template_dict = {}
     for data_dir, target_dir in iter_data_dirs(service_path, target_root=slivka_path):
+        if target_dir.exists():
+            click.echo(f"Directory exists: {target_dir}.")
+            if click.confirm("Overwrite?", default=False):
+                shutil.rmtree(target_dir)
         if not target_dir.exists():
-            click.echo(f"Directory exists: {target_dir}. Skipping.")
             shutil.copytree(data_dir, target_dir)
         template_dict[f"dir:{data_dir.name}"] = os.path.join("${SLIVKA_HOME}", data_dir.name, service_full_name)
 
