@@ -1,3 +1,19 @@
+## Cloning the respository
+
+This repository uses other repositories which are included as git submodules.
+By default `git clone` does not clone submodules recursively.
+Use `--recurse-submodules` clone the repo with all included submodules e.g.
+
+```
+git clone --recurse-submodules https://github.com/proteinverse/slivka-bio-installer.git
+```
+
+If you have already cloned the repository without submodules then run
+
+```
+git submodule init && git submodule update
+```
+
 ## Prerequisities
 
 As a bare minimum, the installer requires python, click, ruamel.yaml and slivka.
