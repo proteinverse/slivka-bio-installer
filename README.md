@@ -22,7 +22,7 @@ Move to the directory where you cloned the installer repository and run:
 ```
 python install.py <PATH>
 ```
-subsituting the project destination for _<PATH>_.
+subsituting the project destination for _&lt;PATH&gt;_.
 The installer will display the list of tools that will be installed and prompt for the installation method for each one of them.
 If the installation fails, you will be prompted to retry, skip the installation of that service, abort and stop the installer or ignore the error and proceed with the installation.
 
