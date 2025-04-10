@@ -1,8 +1,12 @@
+from collections import ChainMap
+import collections.abc
 import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
+import tempfile
+from typing import Iterable
 
 import click
 from ruamel.yaml import YAML
@@ -31,49 +35,56 @@ class TemplateYamlLoader(YAML):
 @click.argument("path", type=Path)
 def main(conda_exe, services, path: Path):
     try:
-        conda_installer = CondaInstaller.create(conda_exe, path / "conda_env")
+        conda_installer = CondaInstaller(conda_exe, path / "conda_env")
     except Exception as e:
         conda_installer = None
         click.echo(f"Failed to init conda installer: {e}")
     else:
         click.echo(f"Conda available: '{conda_installer.conda_exe}'")
 
-    try:
-        docker_installer = DockerInstaller.create()
-    except Exception as e:
-        docker_installer = None
-        click.echo(f"Failed to init docker installer: {e}")
-    else:
-        click.echo(f"Docker available")
+    docker_installer = None
+    # try:
+    #     docker_installer = DockerInstaller.create()
+    # except Exception as e:
+    #     docker_installer = None
+    #     click.echo(f"Failed to init docker installer: {e}")
+    # else:
+    #     click.echo(f"Docker available")
 
-    service_paths_to_install = [
-        service_dir.resolve()
-        for service_dir in Path.cwd().joinpath("install").iterdir()
+    service_files = [
+        path
+        for path in Path.cwd().joinpath("install").glob("**/*.service.yaml")
         for name in services
-        if service_dir.name.startswith(name) and next(service_dir.glob("*.service.yaml"), False)
+        if path.name.startswith(name)
     ]
+    if not service_files:
+        click.echo("Nothing to install.")
+        raise click.Abort
     click.echo("Installing:")
-    for service_path in sorted(service_paths_to_install):
-        yaml_file = next(service_path.glob("*.service.yaml"))
-        yaml_data = yaml.load(yaml_file)
+    for service_file in sorted(service_files):
+        yaml_data = yaml.load(service_file)
         click.echo(f" - {yaml_data['name']}:{yaml_data['version']}")
     click.confirm("Confirm", default=True, abort=True)
 
-    install_slivka(path)
-    install_shared(path)
+    init_slivka(path)
+    copy_shared_files(path)
 
-    installers = [
+    available_installers = [
         obj for obj in (conda_installer, docker_installer) if obj is not None
     ]
 
-    for service_path in service_paths_to_install:
-        click.echo(f"Installing: {service_path.name}")
-        applicable_installers = [
-            obj for obj in installers
-            if obj.is_applicable_to(service_path)
-        ]
-        retry = True
-        while retry:
+    for service_file in service_files:
+        base_name = service_file.name[:-len(".service.yaml")]
+        click.echo(f"Installing: {base_name}")
+        applicable_installers = []
+        if service_file.with_name(f"{base_name}.conda.yaml").is_file():
+            applicable_installers.append(conda_installer)
+        if service_file.with_name(f"{base_name}.docker.yaml").is_file():
+            applicable_installers.append(docker_installer)
+        if not applicable_installers:
+            click.echo(f"No applicable installer for {base_name}")
+            continue
+        while True:
             installer_names = []
             choices = []
             if conda_installer in applicable_installers:
@@ -87,90 +98,269 @@ def main(conda_exe, services, path: Path):
                 type=click.Choice(choices, case_sensitive=False),
                 show_choices=False
             )
-            if ans == "c": installer = conda_installer
-            if ans == "d": installer = docker_installer
+            if ans == "c":
+                installer = conda_installer
+                installer_file = service_file.with_name(f"{base_name}.conda.yaml")
+            if ans == "d":
+                installer = docker_installer
+                installer_file = service_file.with_name(f"{base_name}.docker.yaml")
             try:
-                rep = installer.install(service_path)
-                command_prefix = installer.get_command_prefix(service_path, rep)
-                retry = False
+                output_file = installer.install_service(installer_file, path)
+                click.echo(f"{click.style('Installed', fg='bright_green')}: {output_file.name}")
+                break
             except Exception as e:
                 click.echo(f"{type(e).__name__}: {e}")
                 ans = click.prompt(
-                    "[R]etry, [S]kip, [A]bort, [I]gnore",
+                    "[R]etry, [S]kip, [A]bort",
                     type=click.Choice("rsai", case_sensitive=False),
                     show_choices=False
                 )
                 if ans == 's':
-                    click.echo(click.style("Skipping", fg="yellow")+ f": {service_path.name}")
+                    click.echo(click.style("Skipping", fg="yellow")+ f": {base_name}")
                     break
                 elif ans == 'a':
                     raise click.Abort
-                elif ans == 'i':
-                    retry = False
+
+
+
+class DataFilesContextMap(dict):
+    def __init__(self, src_root, paths):
+        super().__init__()
+        for src_path, dst_path in paths:
+            if (src_root / src_path).is_dir():
+                self[f"dir:{src_path}"] = os.path.join("${SLIVKA_HOME}", dst_path)
+            elif (src_root / src_path).is_file():
+                self[f"file:{src_path}"] = os.path.join("${SLIVKA_HOME}", dst_path)
+            else:
+                raise ValueError(f"Invalid path: {src_path}")
+
+
+def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
+    """
+    Find data directories under the given path matching the given patterns.
+    If no patterns are specified, all directories are included.
+    If the first pattern is not 'include', {include: *} is added.
+
+    :return: Set of relative paths matching the patterns
+    """
+    if not patterns:
+        patterns = [{'include': '*'}]
+    if 'include' not in patterns[0]:
+        patterns.insert(0, {'include': '*'})
+    matched = set()
+    for rule in patterns:
+        if len(rule) > 1:
+            raise ValueError(f"Rule contains multiple keys: {rule}")
+        key, val = next(iter(rule.items()))
+        if '**' in val or os.path.sep in val:
+            raise ValueError(f"Recursive globbing is not supported: {val}")
+        if key == "include":
+            operation = matched.add
+        elif key == "exclude":
+            operation = matched.discard
         else:
-            output_file = install_service(path, service_path, command_prefix)
-            click.echo(f"{click.style('Installed', fg='bright_green')}: {output_file.name}")
+            raise KeyError(f"Invalid rule: {key}")
+        for path in src_root.glob(val):
+            if path.is_dir():
+                operation(path.relative_to(src_root))
+    return matched
+
+
+
+def copy_data_dirs(copy_list: Iterable[tuple[Path, Path]]):
+    """
+    Copy data directories to the target root.
+
+    :param Iterable[tuple[Path, Path]] copy_paths:
+        Tuples of source and target absolute paths.
+    :return:
+        List of copied paths
+    """
+    copied = []
+    for src_path, dst_path in copy_list:
+        if dst_path.exists():
+            if click.confirm(f"Directory exists: {dst_path}. Overwrite?", default=False):
+                shutil.rmtree(dst_path)
+            else:
+                click.echo(f"Skipping: {dst_path}")
+                continue
+        shutil.copytree(src_path, dst_path)
+        copied.append((src_path, dst_path))
+    return copied
+
+
+def find_and_copy_data_dirs(src_root: Path, patterns: list[dict], target_root: Path) -> list[tuple[Path, Path]]:
+    """
+    Find data directories under the given path matching the given patterns
+    and copy them to the target root.
+    If no patterns are specified, all directories are included.
+    If the first pattern is not 'include', {include: *} is added.
+
+    :param Path src_root:
+        Source directory to search for data directories.
+    :param list[dict] patterns:
+        List of patterns to match source data directories.
+    :param Path target_root:
+        Target directory to copy data directories to.
+    """
+    files_mapping = [
+        (match, match)
+        for match in find_data_dirs(src_root, patterns)
+    ]
+    copy_data_dirs(
+        (src_root / src_path, target_root / dst_path)
+        for src_path, dst_path in files_mapping
+    )
+    return files_mapping
+
+
+def copy_service_file(template_file: Path, target_root: Path, template_data: dict, prepend_command=[]):
+    yaml = TemplateYamlLoader(template_data)
+    service_config = yaml.load(template_file)
+    service_config["command"] = [*prepend_command, *service_config["command"]]
+    (target_root / "services").mkdir(exist_ok=True)
+    dest_file = target_root / "services" / template_file.name
+    yaml.dump(service_config, dest_file)
+    return dest_file
+
+
+def interpolate_string(data: str, context: dict):
+    return re.sub(r'\{\{ ?(\w+:[\w\/\.]+) ?\}\}', lambda m: context[m.group(1)], data)
+
+
+def interpolate_list(data: list, context: dict):
+    return [
+        interpolate_string(item, context) if isinstance(item, str) else
+        interpolate_dict(item, context) if isinstance(item, collections.abc.Mapping) else
+        interpolate_list(item, context) if isinstance(item, collections.abc.Iterable) else
+        item
+        for item in data
+    ]
+
+
+def interpolate_dict(data: dict, context: dict):
+    return {
+        key: (
+            interpolate_string(value, context) if isinstance(value, str) else
+            interpolate_dict(value, context) if isinstance(value, collections.abc.Mapping) else
+            interpolate_list(value, context) if isinstance(value, collections.abc.Iterable) else
+            value
+        )
+        for key, value in data.items()
+    }    
+
+
+class CondaEnvContextMap:
+    def __init__(self, conda_exe, env_path):
+        self.conda_exe = conda_exe
+        self.env_path = env_path
+
+    def __getitem__(self, item):
+        key, name = item.split(":", 1)
+        if key == "env":
+            return os.environ[name]
+        if key == "which":
+            exe = shutil.which(name, path=f"{self.env_path}/bin{os.pathsep}{os.environ['PATH']}")
+            if not exe:
+                raise ValueError(f"Executable not found: {name}")
+            return exe
+        raise KeyError(item)
 
 
 class CondaInstaller:
-    def __init__(self, conda_exe, conda_env_root):
-        self.conda_exe = conda_exe
+    def __init__(self, conda_exe, conda_env_root: Path):
+        self.conda_exe = shutil.which(conda_exe) if conda_exe else detect_conda_exe()
+        if not self.conda_exe:
+            raise ValueError(f"Invalid conda exe: {conda_exe}")
         self.conda_env_root = conda_env_root
-
-    @classmethod
-    def create(cls, conda_exe=None, conda_env_root=None):
-        if not conda_exe:
-            try:
-                conda_exe = next(filter(None, _iter_conda_exe()))
-            except StopIteration:
-                raise Exception("No conda executable found.")
-        if not conda_env_root:
+        conda_env_root.mkdir(exist_ok=True)
+        if not conda_env_root.is_dir():
             raise ValueError(f"Invalid conda env root: {conda_env_root}")
-        return CondaInstaller(conda_exe, conda_env_root)
+        
+    def install_service(self, install_file: Path, project_path: Path):
+        """
+        Install conda environment from the given install file.
 
-    def is_applicable_to(self, template_path: Path):
-        return (template_path / "environment.yaml").is_file()
+        :param Path install_file:
+            Path to the conda install file.
+        :param Path project_path:
+            Path to the target project directory.
+        """
+        config = yaml.load(install_file)
+        # strip .conda.yaml suffix
+        base_name = install_file.name[:-len(".conda.yaml")]
 
-    def install(self, template_path: Path):
-        try:
-            return create_conda_env(
-                conda_env_root=self.conda_env_root,
-                service_path=template_path,
-                conda_exe=self.conda_exe
-            )
-        except subprocess.CalledProcessError:
-            click.echo(f"Failed to install conda env for {template_path.name}")
-            raise
+        if "environment" in config:
+            with tempfile.NamedTemporaryFile(suffix=".yaml") as env_file:
+                yaml.dump(config["environment"], env_file)
+                env_file.flush()
+                env_path = self.create_env(base_name, Path(env_file.name))
+        else:
+            env_file = config.get("environment-file", "environment.yaml")
+            env_file = install_file.with_name(env_file)
+            env_path = self.create_env(base_name, env_file)
+        env_context = CondaEnvContextMap(self.conda_exe, env_path)
 
-    def get_command_prefix(self, template_path: Path, conda_env):
-        return [self.conda_exe, "run", "-p", str(conda_env)]
+        data_dir = Path("data", base_name)
+        copied_data_dirs = find_and_copy_data_dirs(
+            src_root=install_file.parent,
+            target_root=project_path / data_dir,
+            patterns=config.get("files", [])
+        )
+        data_dirs_context = DataFilesContextMap(
+            install_file.parent,
+            ((src_path, data_dir / dst_path)
+             for src_path, dst_path in copied_data_dirs)
+        )
+
+        context_map = ChainMap(env_context, data_dirs_context)
+        vars_context = {
+            f"var:{key}": val
+            for key, val in interpolate_dict(config.get("vars", {}), context_map).items()
+        }
+        context_map.maps.insert(0, vars_context)
+
+        command_prefix = [self.conda_exe, "run", "-p", str(env_path)]
+        return copy_service_file(
+            template_file=install_file.with_name(f"{base_name}.service.yaml"),
+            target_root=project_path,
+            template_data=context_map,
+            prepend_command=command_prefix
+        )
+
+
+    def create_env(self, env_name: str, env_file: Path):
+        if not env_file.is_file():
+            raise FileNotFoundError(f"{env_file}")
+        env_path = (self.conda_env_root / env_name).resolve()
+        if env_path.exists():
+            if not click.confirm(f"Conda env already exists: {env_path}. Overwrite?"):
+                return env_path
+        proc = subprocess.run(
+            [
+                self.conda_exe, "env", "create",
+                "--prefix", env_path,
+                "--file", env_file,
+                "--yes", "--quiet"
+            ]
+        )
+        proc.check_returncode()
+        return env_path
+
+
+def detect_conda_exe():
+    try:
+        return next(filter(None, _iter_conda_exe()), None)
+    except StopIteration:
+        raise Exception("No conda executable found.")
 
 
 def _iter_conda_exe():
-    yield os.environ.get("CONDA_EXE")
     yield os.environ.get("MAMBA_EXE")
+    yield os.environ.get("CONDA_EXE")
     yield shutil.which("micromamba")
     yield shutil.which("mamba")
     yield shutil.which("conda")
-
-
-def create_conda_env(conda_env_root: Path, service_path: Path, conda_exe: str):
-    service_full_name = service_path.name
-    env_file_path = service_path / "environment.yaml"
-    env_path = (conda_env_root / service_full_name).resolve()
-    if env_path.exists():
-        click.echo(f"Conda env already exists: {env_path}. Skipping.")
-        return env_path
-    proc = subprocess.run(
-        [
-            conda_exe, "env", "create",
-            "--prefix", env_path,
-            "--file", env_file_path,
-            "--yes", "--quiet"
-        ]
-    )
-    proc.check_returncode()
-    return env_path
 
 
 class DockerInstaller:
@@ -248,19 +438,19 @@ def pull_docker_image(image, tag, platform):
     return image_id 
 
 
-def install_slivka(slivka_path: Path):
+def init_slivka(slivka_path: Path):
     subprocess.run(["slivka", "init", slivka_path])
 
 
-def install_shared(slivka_path: Path):
+def copy_shared_files(target_root: Path):
     shared_dir = Path.cwd() / "shared"
     for root, dirs, files in os.walk(shared_dir):
         root = Path(root)
         rel_root: Path = root.relative_to(shared_dir)
         for dirname in dirs:
-            (slivka_path / rel_root / dirname).mkdir(exist_ok=True)
+            (target_root / rel_root / dirname).mkdir(exist_ok=True)
         for filename in files:
-            target_file = slivka_path / rel_root / filename
+            target_file = target_root / rel_root / filename
             if not target_file.exists():
                 shutil.copy2(root / filename, target_file)
             else:

@@ -308,7 +308,7 @@ args:
     arg: $(value)
 
 env:
-  FASTA_4_MAFFT: ${HOME}/bin/fasta36
+  FASTA_4_MAFFT: "{{ var:fasta_4_mafft }}"
 
 outputs:
   alignment:

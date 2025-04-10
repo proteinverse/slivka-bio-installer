@@ -1,0 +1,15 @@
+files:
+- include: data
+- include: testdata
+
+vars:
+  fasta_4_mafft: "{{ which:fasta36 }}"
+
+environment:
+  channels:
+    - bioconda
+    - conda-forge
+    - nodefaults
+  dependencies:
+    - bioconda::fasta3=36.3.8
+    - bioconda::mafft=7.458
