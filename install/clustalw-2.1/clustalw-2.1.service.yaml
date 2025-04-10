@@ -180,7 +180,7 @@ parameters:
     default: 1
 
 command:
-- clustalw2
+- clustalw
 
 args:
   input:
