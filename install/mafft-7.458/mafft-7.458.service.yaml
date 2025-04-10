@@ -303,7 +303,7 @@ args:
   local-gap-open-penalty:
     arg: --lop $(value)
   matrix:
-    arg: --aamatrix {{ dir:data }}/matrices/$(value)
+    arg: --aamatrix {{ dir:matrices}}/$(value)
   input:
     arg: $(value)
 
