@@ -1,0 +1,11 @@
+files:
+- include: data
+- include: testdata
+
+environment:
+  channels:
+    - conda-forge
+    - bioconda
+    - nodefaults
+  dependencies:
+    - bioconda::clustalw=2.1

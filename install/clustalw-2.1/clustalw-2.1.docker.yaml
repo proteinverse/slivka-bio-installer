@@ -1,0 +1,4 @@
+pull:
+  image: biocontainers/clustalw
+  tag: v2.1lgpl-6-deb_cv1
+  platform: linux/amd64

@@ -20,7 +20,7 @@ class TemplateYamlLoader(YAML):
         super().__init__(*args, **kwargs)
         self._mapping = mapping
         self.Constructor.add_constructor('tag:yaml.org,2002:str', self.replace_placeholder)
-    
+
     def _match_repl(self, match):
         return self._mapping[match.group(1)]
 
@@ -42,14 +42,13 @@ def main(conda_exe, services, path: Path):
     else:
         click.echo(f"Conda available: '{conda_installer.conda_exe}'")
 
-    docker_installer = None
-    # try:
-    #     docker_installer = DockerInstaller.create()
-    # except Exception as e:
-    #     docker_installer = None
-    #     click.echo(f"Failed to init docker installer: {e}")
-    # else:
-    #     click.echo(f"Docker available")
+    try:
+        docker_installer = DockerInstaller()
+    except Exception as e:
+        docker_installer = None
+        click.echo(f"Failed to init docker installer: {e}")
+    else:
+        click.echo(f"Docker available")
 
     service_files = [
         path
@@ -247,7 +246,7 @@ def interpolate_dict(data: dict, context: dict):
             value
         )
         for key, value in data.items()
-    }    
+    }
 
 
 class CondaEnvContextMap:
@@ -271,12 +270,12 @@ class CondaInstaller:
     def __init__(self, conda_exe, conda_env_root: Path):
         self.conda_exe = shutil.which(conda_exe) if conda_exe else detect_conda_exe()
         if not self.conda_exe:
-            raise ValueError(f"Invalid conda exe: {conda_exe}")
+            raise FileNotFoundError(f"Invalid conda exe: {conda_exe}")
         self.conda_env_root = conda_env_root
         conda_env_root.mkdir(exist_ok=True)
         if not conda_env_root.is_dir():
-            raise ValueError(f"Invalid conda env root: {conda_env_root}")
-        
+            raise NotADirectoryError(f"Invalid conda env root: {conda_env_root}")
+
     def install_service(self, install_file: Path, project_path: Path):
         """
         Install conda environment from the given install file.
@@ -363,57 +362,148 @@ def _iter_conda_exe():
     yield shutil.which("conda")
 
 
-class DockerInstaller:
-    @classmethod
-    def create(cls):
-        docker_exe = shutil.which("docker")
-        if not docker_exe:
-            raise Exception("Docker not found.")
-        return DockerInstaller()
+class DockerEnvContextMap:
+    def __init__(self, docker_exe, image_name):
+        self.docker_exe = docker_exe
+        self.image_name = image_name
+        self._env_vars = None
 
-    def is_applicable_to(self, template_path: Path):
-        return (
-            (template_path / "docker.yaml").is_file() or
-            (template_path / "Dockerfile").is_file()
+    def __getitem__(self, item):
+        key, name = item.split(":", 1)
+        if key == "env":
+            return self.get_env_var(name)
+        if key == "which":
+            exe = shutil.which(name, path=f"{self.env_path}/bin{os.pathsep}{os.environ['PATH']}")
+            if not exe:
+                raise ValueError(f"Executable not found: {name}")
+            return exe
+        raise KeyError(item)
+
+    def get_env_var(self, name):
+        if self._env_vars is None:
+            self._populate_env_vars()
+        return self._env_vars[name]
+
+    def _populate_env_vars(self):
+        output = subprocess.check_output(
+            [
+                self.docker_exe, "run",
+                "--rm", "--entrypoint", "env",
+                self.image_name
+            ],
+            text=True
+        )
+        self._env_vars = dict(
+            line.split("=", 1) for line in output.splitlines()
         )
 
-    def install(self, template_path: Path):
-        image_data = yaml.load(template_path / "docker.yaml")
-        if (template_path / "Dockerfile").is_file():
-            return build_docker_image(
-                template_path / "Dockerfile",
-                image_name=image_data["image"],
-                image_tag=image_data["tag"],
-                platform=image_data["platform"]
+    def get_which(self, prog_name):
+        try:
+            output = subprocess.check_output(
+                [
+                    self.docker_exe, "run",
+                    "--rm", "--entrypoint", "which",
+                    self.image_name,
+                    prog_name
+                ],
+                text=True
             )
-        else:
-            return pull_docker_image(
-                image=image_data["image"],
-                tag=image_data["tag"],
-                platform=image_data["platform"]
-            )
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 1:
+                raise ValueError(f"Executable not found: {prog_name}")
+        return output.strip()
 
-    def get_command_prefix(self, template_path: Path, image_tag):
-        data_dirs = iter_data_dirs(template_path, target_root=Path("${SLIVKA_HOME}"))
-        # flatten arg pairs
-        mount_args = sum((('--mount', f"type=bind,src={t},dst={t},ro") for _, t in data_dirs), ())
+
+class DockerInstaller:
+    def __init__(self):
+        self.docker_exe = shutil.which("docker")
+        if not self.docker_exe:
+            raise FileNotFoundError("Docker not found.")
+
+    def install_service(self, install_file: Path, project_path: Path):
+        config = yaml.load(install_file)
+        # strip .docker.yaml suffix
+        base_name = install_file.name[:-len(".docker.yaml")]
+        image_name = self._make_image(install_file.parent, config)
+        env_context = DockerEnvContextMap(self.docker_exe, image_name)
+
+        dst_data_dir = project_path / "data" / base_name
+        copied_data_dirs = find_and_copy_data_dirs(
+            src_root=install_file.parent,
+            target_root=dst_data_dir,
+            patterns=config.get("files", [])
+        )
+        data_dirs_context = DataFilesContextMap(
+            install_file.parent,
+            ((src_path, Path("/data", dst_path))
+             for src_path, dst_path in copied_data_dirs)
+        )
+
+        context_map = ChainMap(env_context, data_dirs_context)
+        vars_context = {
+            f"var:{key}": val
+            for key, val in interpolate_dict(config.get("vars", {}), context_map).items()
+        }
+        context_map.maps.insert(0, vars_context)
+
+        mount_args = sum(
+            (
+                ("--mount", f"type=bind,src={dst_data_dir / p},dst=/data/{p},ro")
+                for _, p in copied_data_dirs
+            ),
+            ()
+        )
         wrapper_script = os.path.join("${SLIVKA_HOME}", "scripts", "run_with_docker.sh")
-        return [
-            "/usr/bin/env",
+        command_prefix = [
+            shutil.which("env"),
             "bash",
             wrapper_script,
             *mount_args,
-            image_tag
+            image_name
         ]
+        return copy_service_file(
+            template_file=install_file.with_name(f"{base_name}.service.yaml"),
+            target_root=project_path,
+            template_data=context_map,
+            prepend_command=command_prefix
+        )
 
 
-def build_docker_image(dockerfile: Path, image_name, image_tag, platform):
-    full_tag = f"{image_name}:{image_tag}"
+    def _make_image(self, src_root: Path, config: dict):
+        if "pull" in config:
+            if isinstance(config["pull"], str):
+                return pull_docker_image(
+                    image_name=config["pull"]
+                )
+            else:
+                return pull_docker_image(
+                    image_name=config["pull"]["image"],
+                    image_tag=config["pull"].get("tag"),
+                    platform=config["pull"].get("platform")
+                )
+        if "build" in config:
+            return build_docker_image(
+                dockerfile=src_root / config["build"]["dockerfile"],
+                image_name=config["build"]["image"],
+                image_tag=config["build"].get("tag"),
+                platform=config["build"].get("platform")
+            )
+        raise ValueError("No image specified in the config.")
+
+
+
+def build_docker_image(dockerfile: Path, image_name, image_tag=None, platform=None):
+    if not dockerfile.is_file():
+        raise FileNotFoundError(f"{dockerfile}")
+    full_tag = f"{image_name}:{image_tag}" if image_tag else image_name
+    options = []
+    if platform:
+        options.extend(["--platform", platform])
     proc = subprocess.run(
         [
             "docker", "buildx", "build",
             "--tag", full_tag,
-            "--platform", platform,
+            *options,
             "--file", dockerfile,
             dockerfile.parent
         ],
@@ -424,18 +514,21 @@ def build_docker_image(dockerfile: Path, image_name, image_tag, platform):
 
 
 
-def pull_docker_image(image, tag, platform):
-    image_id = f"{image}:{tag}"
+def pull_docker_image(image_name, image_tag=None, platform=None):
+    full_tag = f"{image_name}:{image_tag}" if image_tag else image_name
+    options = []
+    if platform:
+        options.extend(["--platform", platform])
     proc = subprocess.run(
         [
             "docker", "image", "pull",
-            "--platform", platform,
+            *options,
             "--quiet",
-            image_id
+            full_tag
         ]
     )
     proc.check_returncode()
-    return image_id 
+    return full_tag
 
 
 def init_slivka(slivka_path: Path):
@@ -455,44 +548,6 @@ def copy_shared_files(target_root: Path):
                 shutil.copy2(root / filename, target_file)
             else:
                 click.echo(f"File exists: {target_file}")
-
-
-def install_service(slivka_path: Path, service_path: Path, prepend_command=[]):
-    service_full_name = service_path.name
-    service_template_path = next(service_path.glob("*.service.yaml"))
-
-    template_dict = {}
-    for data_dir, target_dir in iter_data_dirs(service_path, target_root=slivka_path):
-        if target_dir.exists():
-            click.echo(f"Directory exists: {target_dir}.")
-            if click.confirm("Overwrite?", default=False):
-                shutil.rmtree(target_dir)
-        if not target_dir.exists():
-            shutil.copytree(data_dir, target_dir)
-        template_dict[f"dir:{data_dir.name}"] = os.path.join("${SLIVKA_HOME}", data_dir.name, service_full_name)
-
-    yaml = TemplateYamlLoader(template_dict)
-    service_config = yaml.load(service_template_path)
-    service_config["command"] = [*prepend_command, *service_config["command"]]
-    services_dir = slivka_path / "services"
-    services_dir.mkdir(exist_ok=True)
-    dest_file = services_dir / f"{service_full_name}.service.yaml"
-    yaml.dump(service_config, dest_file)
-    return dest_file
-
-
-def iter_data_dirs(service_path: Path, *, target_root=Path(os.path.curdir)):
-    """
-    Iterates data directories under the given path.
-    Returns tuples of source data directory and target directory
-    the data should be copied to.
-    If target root is not specified, the targets will be relative.
-    """
-    data_dirs_iter = filter(Path.is_dir, service_path.iterdir())
-    return (
-        (data_dir, target_root / data_dir.name / service_path.name)
-        for data_dir in data_dirs_iter
-    )
 
 
 if __name__ == '__main__':
