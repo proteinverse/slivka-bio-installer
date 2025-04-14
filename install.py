@@ -130,6 +130,14 @@ class DataFilesContextMap(dict):
             self[f"{key_prefix}path:{src_path}"] = str(dst_root / dst_path)
 
 
+def local_paths_context(paths, dst_root):
+    return DataFilesContextMap(paths, dst_root, key_prefix="local-")
+
+
+def runtime_paths_context(paths, dst_root):
+    return DataFilesContextMap(paths, dst_root, key_prefix="runtime-")
+
+
 def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
     """
     Find data directories under the given path matching the given patterns.
@@ -302,11 +310,11 @@ class CondaInstaller:
             target_root=dst_data_dir,
             patterns=config.get("files", [])
         )
-        data_dirs_context = DataFilesContextMap(
+        data_dirs_context = local_paths_context(
             copied_data_dirs, dst_root=dst_data_dir
         )
-        runtime_data_dirs_context = DataFilesContextMap(
-            copied_data_dirs, dst_root=dst_data_dir, key_prefix="runtime-"
+        runtime_data_dirs_context = runtime_paths_context(
+            copied_data_dirs, dst_root=dst_data_dir
         )
 
         context_map = ChainMap(
@@ -432,11 +440,11 @@ class DockerInstaller:
             target_root=dst_data_dir,
             patterns=config.get("files", [])
         )
-        data_dirs_context = DataFilesContextMap(
+        data_dirs_context = local_paths_context(
             copied_data_dirs, dst_root=dst_data_dir
         )
-        runtime_data_dirs_context = DataFilesContextMap(
-            copied_data_dirs, dst_root=Path("/data"), key_prefix="runtime-"
+        runtime_data_dirs_context = runtime_paths_context(
+            copied_data_dirs, dst_root=Path("/data")
         )
 
         context_map = ChainMap(
