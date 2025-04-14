@@ -26,7 +26,7 @@ class TemplateYamlLoader(YAML):
 
     def replace_placeholder(self, loader, node):
         value = loader.construct_scalar(node)
-        return re.sub(r'\{\{ ?(\w+:[\w\/\.]+) ?\}\}', self._match_repl, value)
+        return re.sub(r'\{\{ ?([\w\-]+:[\w\-\/\.]+) ?\}\}', self._match_repl, value)
 
 
 @click.command()
@@ -109,6 +109,7 @@ def main(conda_exe, services, path: Path):
                 break
             except Exception as e:
                 click.echo(f"{type(e).__name__}: {e}")
+                raise e
                 ans = click.prompt(
                     "[R]etry, [S]kip, [A]bort",
                     type=click.Choice("rsai", case_sensitive=False),
@@ -123,15 +124,10 @@ def main(conda_exe, services, path: Path):
 
 
 class DataFilesContextMap(dict):
-    def __init__(self, src_root, paths):
+    def __init__(self, paths, dst_root, key_prefix=""):
         super().__init__()
         for src_path, dst_path in paths:
-            if (src_root / src_path).is_dir():
-                self[f"dir:{src_path}"] = os.path.join("${SLIVKA_HOME}", dst_path)
-            elif (src_root / src_path).is_file():
-                self[f"file:{src_path}"] = os.path.join("${SLIVKA_HOME}", dst_path)
-            else:
-                raise ValueError(f"Invalid path: {src_path}")
+            self[f"{key_prefix}path:{src_path}"] = str(dst_root / dst_path)
 
 
 def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
@@ -272,7 +268,7 @@ class CondaInstaller:
         if not self.conda_exe:
             raise FileNotFoundError(f"Invalid conda exe: {conda_exe}")
         self.conda_env_root = conda_env_root
-        conda_env_root.mkdir(exist_ok=True)
+        os.makedirs(conda_env_root, exist_ok=True)
         if not conda_env_root.is_dir():
             raise NotADirectoryError(f"Invalid conda env root: {conda_env_root}")
 
@@ -300,19 +296,22 @@ class CondaInstaller:
             env_path = self.create_env(base_name, env_file)
         env_context = CondaEnvContextMap(self.conda_exe, env_path)
 
-        data_dir = Path("data", base_name)
+        dst_data_dir = project_path / "data" / base_name
         copied_data_dirs = find_and_copy_data_dirs(
             src_root=install_file.parent,
-            target_root=project_path / data_dir,
+            target_root=dst_data_dir,
             patterns=config.get("files", [])
         )
         data_dirs_context = DataFilesContextMap(
-            install_file.parent,
-            ((src_path, data_dir / dst_path)
-             for src_path, dst_path in copied_data_dirs)
+            copied_data_dirs, dst_root=dst_data_dir
+        )
+        runtime_data_dirs_context = DataFilesContextMap(
+            copied_data_dirs, dst_root=dst_data_dir, key_prefix="runtime-"
         )
 
-        context_map = ChainMap(env_context, data_dirs_context)
+        context_map = ChainMap(
+            env_context, data_dirs_context, runtime_data_dirs_context
+        )
         vars_context = {
             f"var:{key}": val
             for key, val in interpolate_dict(config.get("vars", {}), context_map).items()
@@ -434,12 +433,15 @@ class DockerInstaller:
             patterns=config.get("files", [])
         )
         data_dirs_context = DataFilesContextMap(
-            install_file.parent,
-            ((src_path, Path("/data", dst_path))
-             for src_path, dst_path in copied_data_dirs)
+            copied_data_dirs, dst_root=dst_data_dir
+        )
+        runtime_data_dirs_context = DataFilesContextMap(
+            copied_data_dirs, dst_root=Path("/data"), key_prefix="runtime-"
         )
 
-        context_map = ChainMap(env_context, data_dirs_context)
+        context_map = ChainMap(
+            env_context, data_dirs_context, runtime_data_dirs_context
+        )
         vars_context = {
             f"var:{key}": val
             for key, val in interpolate_dict(config.get("vars", {}), context_map).items()
