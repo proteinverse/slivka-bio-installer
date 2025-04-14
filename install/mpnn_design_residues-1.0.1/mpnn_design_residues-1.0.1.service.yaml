@@ -73,11 +73,11 @@ parameters:
 
 command:
 - bash
-- "{{ dir:scripts }}/mpnn_design_residues.sh"
+- "{{ runtime-path:scripts }}/mpnn_design_residues.sh"
 
 env:
   PYTHON_EXE: python3
-  PROTEIN_MPNN: "{{ dir:src }}"
+  PROTEIN_MPNN: "{{ var:mpnn_sources }}"
 
 args:
   input:

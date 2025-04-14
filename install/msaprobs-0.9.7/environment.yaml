@@ -1,7 +1,0 @@
-name: msaprobs-0.9.7
-channels:
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bioconda::msaprobs=0.9.7

@@ -1,7 +1,0 @@
-name: aacon-1.1
-channels:
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bioconda::aacon=1.1

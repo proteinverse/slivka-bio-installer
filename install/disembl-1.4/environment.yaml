@@ -1,8 +1,0 @@
-name: disembl-1.4
-channels:
-  - bartongroup
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bartongroup::disembl=1.4

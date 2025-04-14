@@ -1,7 +1,0 @@
-name: clustalo-1.2.4
-channels:
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bioconda::clustalo=1.2.4

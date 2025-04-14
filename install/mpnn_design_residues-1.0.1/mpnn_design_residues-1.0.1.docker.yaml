@@ -1,0 +1,12 @@
+files:
+- include: scripts
+- exclude: src
+
+build:
+  dockerfile: Dockerfile
+  image: protein-mpnn
+  tag: v1.0.1-cu118-ubuntu22.04
+  platform: linux/amd64
+
+vars:
+  mpnn_sources: "{{ env:PROTEIN_MPNN }}"

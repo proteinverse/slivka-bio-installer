@@ -323,7 +323,7 @@ outputs:
 tests:
 - applicable-runners: ["default"]
   parameters:
-    sequence: "{{ dir:testdata }}/uniref50.fa"
+    sequence: "{{ local-path:testdata }}/uniref50.fa"
   timeout: 60
 
 execution:

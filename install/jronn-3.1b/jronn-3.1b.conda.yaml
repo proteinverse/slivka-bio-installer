@@ -1,5 +1,4 @@
 files:
-- include: matrices
 - include: testdata
 
 environment:
@@ -8,4 +7,4 @@ environment:
     - bioconda
     - nodefaults
   dependencies:
-    - bioconda::clustalw=2.1
+    - bioconda::jronn=7.1.0

@@ -1,7 +1,0 @@
-name: muscle-3.8.1551
-channels:
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bioconda::muscle=3.8.1551

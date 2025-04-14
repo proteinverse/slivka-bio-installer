@@ -1,0 +1,7 @@
+files:
+- include: testdata
+- include: matrices
+
+pull:
+  image: biocontainers/muscle:v1-3.8.1551-2-deb_cv1
+  platform: linux/amd64

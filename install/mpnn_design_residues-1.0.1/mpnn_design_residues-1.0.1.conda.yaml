@@ -1,0 +1,21 @@
+files:
+- include: scripts
+- include: src
+
+environment:
+  channels:
+    - pytorch
+    - bioconda
+    - conda-forge
+    - nodefaults
+  dependencies:
+    - python=3.10
+    - biopython~=1.85
+    - pytorch~=2.0.0
+    - torchaudio~=2.0.1
+    - torchvision~=0.15.1
+    - numpy~=1.26
+    - cuda-version=11.8
+
+vars:
+  mpnn_sources: "{{ local-path:src }}"

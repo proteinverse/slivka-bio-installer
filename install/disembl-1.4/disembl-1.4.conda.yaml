@@ -1,11 +1,11 @@
 files:
-- include: matrices
 - include: testdata
 
 environment:
   channels:
+    - bartongroup
     - conda-forge
     - bioconda
     - nodefaults
   dependencies:
-    - bioconda::clustalw=2.1
+    - bartongroup::disembl=1.4

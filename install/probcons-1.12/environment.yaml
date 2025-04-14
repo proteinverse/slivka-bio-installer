@@ -1,7 +1,0 @@
-name: probcons-1.12
-channels:
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bioconda::probcons=1.12

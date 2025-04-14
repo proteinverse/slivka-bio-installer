@@ -1,7 +1,0 @@
-name: muscle-5.1
-channels:
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bioconda::muscle=5.1

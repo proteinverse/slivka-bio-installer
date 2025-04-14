@@ -1,6 +1,6 @@
 files:
-- include: matrices
 - include: testdata
+- include: matrices
 
 environment:
   channels:
@@ -8,4 +8,4 @@ environment:
     - bioconda
     - nodefaults
   dependencies:
-    - bioconda::clustalw=2.1
+    - bioconda::muscle=3.8.1551

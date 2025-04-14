@@ -1,0 +1,7 @@
+files:
+- include: testdata
+
+pull:
+  image: biocontainers/clustalo
+  tag: v1.2.4-2-deb_cv1
+  platform: linux/amd64

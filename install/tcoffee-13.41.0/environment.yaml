@@ -1,8 +1,0 @@
-name: t_coffee-13.41.0
-channels:
-  - bartongroup
-  - conda-forge
-  - bioconda
-  - nodefaults
-dependencies:
-  - bartongroup::t_coffee=13.41.0
