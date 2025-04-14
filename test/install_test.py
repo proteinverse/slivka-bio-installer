@@ -195,9 +195,22 @@ def test_find_and_copy_data_dirs_glob_pattern(tmp_path):
 
 # Test cases for the interpolation functions
 
-def test_interpolate_string_basic():
-    context = {"key:value": "replacement"}
-    assert interpolate_string("This is a {{ key:value }}.", context) == "This is a replacement."
+@pytest.mark.parametrize(
+    ("input_string", "context", "expected_output"),
+    [
+        ("This is a {{ key:value }}.", {"key:value": "replacement"}, "This is a replacement."),
+        ("{{ local-path:HOME }}/bin.", {"local-path:HOME": "/home/slivka"}, "/home/slivka/bin."),
+        ("No placeholder here.", {}, "No placeholder here."),
+        pytest.param(
+            "This is a {{ missing:key }}.",
+            {"key:value": "replacement"},
+            "This is a {{ missing:key }}.",
+            marks=pytest.mark.xfail(raises=KeyError),
+        )
+    ]
+)
+def test_interpolate_string_basic(input_string, context, expected_output):
+    assert interpolate_string(input_string, context) == expected_output
 
 def test_interpolate_string_no_placeholder():
     context = {"key:value": "replacement"}

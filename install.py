@@ -228,7 +228,7 @@ def copy_service_file(template_file: Path, target_root: Path, template_data: dic
 
 
 def interpolate_string(data: str, context: dict):
-    return re.sub(r'\{\{ ?(\w+:[\w\/\.]+) ?\}\}', lambda m: context[m.group(1)], data)
+    return re.sub(r'\{\{ ?([\w\-]+:[\w\/\.]+) ?\}\}', lambda m: context[m.group(1)], data)
 
 
 def interpolate_list(data: list, context: dict):
