@@ -1,6 +1,7 @@
 #! /bin/bash
 
 set -eu
+guest_workdir="/root"
 
 docker_env_args=()
 for env_var in $(env | grep -vw '^PATH')
@@ -9,9 +10,10 @@ do
 done
 
 docker_mount_args=()
-for link_target in $(find $PWD -type link | xargs readlink -f)
+for link_file in $(find * -type link)
 do
-    docker_mount_args+=(--mount "type=bind,src=$link_target,dst=$link_target,ro")
+    link_target="$(readlink -f $link_file)"
+    docker_mount_args+=(--mount "type=bind,src=$link_target,dst=$guest_workdir/$link_file,ro")
 done
 
 while [[ $# -gt 0 ]]; do
@@ -33,8 +35,8 @@ shift
 exec {BASH_XTRACEFD}>.docker.command
 set -o xtrace
 exec docker run --rm \
-    --mount "type=bind,src=$PWD,dst=/root" \
+    --mount "type=bind,src=$PWD,dst=$guest_workdir" \
     "${docker_mount_args[@]}" \
     "${docker_env_args[@]}" \
-    --workdir "/root" \
+    --workdir "$guest_workdir" \
     -- "$image" "$@"
