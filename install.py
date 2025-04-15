@@ -380,10 +380,7 @@ class DockerEnvContextMap:
         if key == "env":
             return self.get_env_var(name)
         if key == "which":
-            exe = shutil.which(name, path=f"{self.env_path}/bin{os.pathsep}{os.environ['PATH']}")
-            if not exe:
-                raise ValueError(f"Executable not found: {name}")
-            return exe
+            return self.get_which(name)
         raise KeyError(item)
 
     def get_env_var(self, name):

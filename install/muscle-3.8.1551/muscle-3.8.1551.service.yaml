@@ -337,7 +337,7 @@ parameters:
     default: kmer6_6
 
 command:
-- muscle
+- "{{ which:muscle }}"
 
 args:
   _clwstrict:
