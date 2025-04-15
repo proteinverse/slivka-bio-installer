@@ -30,6 +30,8 @@ done
 image=$1
 shift
 
+exec {BASH_XTRACEFD}>.docker.command
+set -o xtrace
 exec docker run --rm \
     --mount "type=bind,src=$PWD,dst=/root" \
     "${docker_mount_args[@]}" \
