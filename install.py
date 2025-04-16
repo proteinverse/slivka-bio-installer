@@ -52,7 +52,7 @@ def main(conda_exe, services, path: Path):
 
     service_files = [
         path
-        for path in Path.cwd().joinpath("install").glob("**/*.service.yaml")
+        for path in Path.cwd().joinpath("services").glob("**/*.service.yaml")
         for name in services
         if path.name.startswith(name)
     ]
