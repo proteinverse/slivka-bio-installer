@@ -109,7 +109,6 @@ def main(conda_exe, services, path: Path):
                 break
             except Exception as e:
                 click.echo(f"{type(e).__name__}: {e}")
-                raise e
                 ans = click.prompt(
                     "[R]etry, [S]kip, [A]bort",
                     type=click.Choice("rsai", case_sensitive=False),
