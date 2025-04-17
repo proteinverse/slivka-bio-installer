@@ -1,0 +1,7 @@
+files:
+- include: testdata
+
+build:
+  dockerfile: Dockerfile
+  image: aacon
+  tag: "1.1"
