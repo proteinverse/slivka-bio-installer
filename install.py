@@ -275,9 +275,6 @@ class CondaInstaller:
         if not self.conda_exe:
             raise FileNotFoundError(f"Invalid conda exe: {conda_exe}")
         self.conda_env_root = conda_env_root
-        os.makedirs(conda_env_root, exist_ok=True)
-        if not conda_env_root.is_dir():
-            raise NotADirectoryError(f"Invalid conda env root: {conda_env_root}")
 
     def install_service(self, install_file: Path, project_path: Path):
         """
@@ -337,6 +334,9 @@ class CondaInstaller:
     def create_env(self, env_name: str, env_file: Path):
         if not env_file.is_file():
             raise FileNotFoundError(f"{env_file}")
+        os.makedirs(self.conda_env_root, exist_ok=True)
+        if not self.conda_env_root.is_dir():
+            raise NotADirectoryError(f"Invalid conda env root: {self.conda_env_root}")
         env_path = (self.conda_env_root / env_name).resolve()
         if env_path.exists():
             if not click.confirm(f"Conda env already exists: {env_path}. Overwrite?"):
