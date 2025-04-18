@@ -1,0 +1,64 @@
+---
+slivka-version: "0.8"
+name: ThermoMPNN
+description: ThermoMPNN is a graph neural network (GNN) trained using transfer learning to predict changes in stability 
+  for protein point mutants. Paper at https://www.pnas.org/doi/10.1073/pnas.2314853121
+author: Dieckhaus H., Brocidiacono M., Randolph N. Z., Kuhlman B.
+version: "1.0"
+license: "Rosetta license"
+classifiers:
+  - 'Topic :: Computational biology :: Protein Design'
+
+parameters:
+  input:
+    type: file
+    media-type: chemical/x-pdb
+    name: Input file
+    description: Input file of the structure to predict mutations stability
+    required: true
+
+  chain:
+    type: string
+    name: Chain to mutate
+    description: Chain id for mutations prediction
+    required: true
+
+command:
+- bash
+- "{{ runtime-path:scripts }}/thermompnn.sh"
+
+env:
+  THERMO_MPNN: "{{ var:thermompnn_source }}"  
+
+args:
+  input:
+    arg: "--pdb $(value)"
+    symlink: structure.pdb
+  chain:
+    arg: "--chain $(value)"
+
+outputs:
+  log:
+    path: stdout
+    name: Standard Log
+    media-type: text/plain
+  error-log:
+    path: stderr
+    name: Error Log
+    media-type: text/plain
+  prediction:
+    path: "*.csv"
+    name: Mutations stability prediction
+    media-type: text/csv
+
+tests:
+- applicable-runners: ["default"]
+  parameters:
+    input: "{{ local-path:testdata }}/2ocj.pdb"
+    chain: A
+  timeout: 60
+
+execution:
+  runners:
+    default: !include _profiles.yaml::default-gpu
+...

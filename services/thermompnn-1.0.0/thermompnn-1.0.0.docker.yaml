@@ -1,0 +1,13 @@
+files:
+- include: scripts
+- include: testdata
+- exclude: ThermoMPNN_source
+
+build:
+  dockerfile: Dockerfile
+  image: thermompnn
+  tag: v1.0.0-cu118-ubuntu22.04
+  platform: linux/amd64
+
+vars:
+  thermompnn_source: "{{ env:THERMO_MPNN }}"

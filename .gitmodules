@@ -1,3 +1,6 @@
 [submodule "install/mpnn_design_residues-1.0.1/src"]
 	path = services/mpnn_design_residues-1.0.1/src
 	url = https://github.com/dauparas/ProteinMPNN.git
+[submodule "services/thermompnn-1.0.0/ThermoMPNN_source"]
+	path = services/thermompnn-1.0.0/ThermoMPNN_source
+	url = https://github.com/Kuhlman-Lab/ThermoMPNN.git

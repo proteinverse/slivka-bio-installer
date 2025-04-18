@@ -1,0 +1,9 @@
+files:
+- include: scripts
+- include: testdata
+- include: ThermoMPNN_source
+
+environment-file: environment.yaml
+
+vars:
+  thermompnn_source: "{{ runtime-path:ThermoMPNN_source }}"

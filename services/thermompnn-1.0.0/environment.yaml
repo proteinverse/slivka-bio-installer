@@ -1,0 +1,23 @@
+channels:
+  - pytorch
+  - nvidia
+  - bioconda
+  - conda-forge
+  - nodefaults
+dependencies:
+  - pytorch-gpu
+  - pytorch-cuda=11.8
+  - torchvision
+  - torchaudio
+  - torchmetrics
+  - pytorch-lightning
+  - biopython
+  - wandb
+  - mmseqs2
+  - tqdm
+  - pandas
+  - numpy
+  - omegaconf
+  - python==3.10
+  - joblib
+  - cudatoolkit=11.8
