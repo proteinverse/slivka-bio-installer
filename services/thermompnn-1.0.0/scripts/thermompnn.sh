@@ -21,9 +21,9 @@ if [[ -z "${input_chain}" ]]; then
 fi
 
 current_directory=${PWD}
-cd "${THERMO_MPNN}"
+cd "${THERMO_MPNN}/analysis"
 $PYTHON_EXE custom_inference.py \
     --model_path "${THERMO_MPNN}/models/thermoMPNN_default.pt" \
-    --output ${current_directory} \
+    --out_dir ${current_directory} \
     --pdb ${input_pdb} \
     --chain ${input_chain}
