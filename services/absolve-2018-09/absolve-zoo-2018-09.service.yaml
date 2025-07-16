@@ -1,7 +1,8 @@
 ---
 slivka-version: "0.8"
 name: Absolve zoo model
-description: 'Absolve is a command line tool for annotating antibody variable
+description: >-
+  Absolve is a command line tool for annotating antibody variable
   domain sequences with:
 
         *  ORF
@@ -14,9 +15,9 @@ description: 'Absolve is a command line tool for annotating antibody variable
   parameters in order to support use *specifically on proteins* by GYDE.  A
   more general Absolve service would require more work (in particular, some
   thought about where to store the germ line databases and how to select which
-  ones to use for a given run.)'
+  ones to use for a given run.)
 author: Genentech
-version: "unknown"
+version: '2018-09'
 license: MIT
 classifiers:
   - 'Topic :: Computational biology :: Sequence analysis'

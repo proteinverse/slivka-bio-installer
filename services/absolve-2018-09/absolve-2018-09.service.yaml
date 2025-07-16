@@ -98,6 +98,12 @@ outputs:
     name: JL database
     media-type: application/fasta
 
+tests:
+- applicable-runners: ["default"]
+  parameters:
+    input: "{{ local-path:testdata }}/simulatedseqs.fa"
+  timeout: 60
+
 execution:
   runners:
     default: !include _profiles.yaml::default
