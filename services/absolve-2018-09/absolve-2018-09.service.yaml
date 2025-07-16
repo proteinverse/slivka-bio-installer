@@ -1,0 +1,104 @@
+---
+slivka-version: 0.8.3
+name: Absolve protein model
+description: >-
+  Absolve is a command line tool for annotating antibody variable
+  domain sequences with:
+
+        *  ORF
+        *  Framework and CDR regions
+        *  Kabat Numbering
+        *  Germline Assignment
+        *  Somatic Hypermutation
+
+  Note that this current Slivka service implementation hard-codes a number of
+  parameters in order to support use *specifically on proteins* by GYDE.  A
+  more general Absolve service would require more work (in particular, some
+  thought about where to store the germ line databases and how to select which
+  ones to use for a given run.)
+author: Genentech
+version: '2018-09'
+license: MIT
+classifiers:
+  - 'Topic :: Computational biology :: Sequence analysis'
+
+parameters:
+  input:
+    type: file
+    media-type: application/fasta
+    name: Input file
+    description: FASTA-formatter protein sequences to analyse
+    required: true
+  multihit:
+    type: int
+    name: Report multiple hits
+    description: Report multiple hits
+    required: false
+
+command:
+- absolve
+
+args:
+  input:
+    arg: --R1 $(value)
+    symlink: input.fa
+  multihit:
+    arg: --multihit $(value)
+  _AA:
+    arg: --AA
+    default: present
+  _useAligner:
+    arg: --useAligner $(value)
+    default: SWA
+  _VH:
+    arg: --VH {{ runtime-path:dbs }}/$(value)
+    default: human/VHv.aa.fa
+  _JH:
+    arg: --JH {{ runtime-path:dbs }}/$(value)
+    default: human/VHj.aa.fa
+  _VL:
+    arg: --VL {{ runtime-path:dbs }}/$(value)
+    default: human/VLv.aa.fa
+  _JL:
+    arg: --JL {{ runtime-path:dbs }}/$(value)
+    default: human/VLj.aa.fa
+  _output:
+    arg: --outdir $(value)
+    default: absolve
+
+outputs:
+  log:
+    # standard output and error streams are automatically redirected
+    # to stdout and stderr files respectively
+    path: stdout
+    name: Output Log
+    media-type: text/plain
+  error-log:
+    path: stderr
+    name: Error Log
+    media-type: text/plain
+  matches:
+    path: absolve/absolve.tsv
+    name: Germ-line matches
+    media-type: text/tsv
+  db-vh:
+    path: dbs/VHv.aa.fa
+    name: VH database
+    media-type: application/fasta
+  db-jh:
+    path: dbs/VHj.aa.fa
+    name: JH database
+    media-type: application/fasta
+  db-vl:
+    path: dbs/VLv.aa.fa
+    name: VL database
+    media-type: application/fasta
+  db-jl:
+    path: dbs/VLj.aa.fa
+    name: JL database
+    media-type: application/fasta
+
+execution:
+  runners:
+    default: !include _profiles.yaml::default
+...
