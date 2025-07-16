@@ -42,4 +42,4 @@ ENV	ABSOLVE_HMMFILE_SCFV=${ABSOLVE_HOME}/hmm/absolveSCFV.hmm \
 
 RUN echo "#! /bin/sh\nexec /usr/local/absolve/absolve_rel \"\$@\"\n" >/usr/local/bin/absolve && \
     chmod +x /usr/local/bin/absolve
-ENTRYPOINT /usr/local/absolve/absolve_rel
+ENTRYPOINT ["/usr/local/absolve/absolve_rel"]
