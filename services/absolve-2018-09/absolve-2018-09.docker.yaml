@@ -6,3 +6,4 @@ build:
   dockerfile: Dockerfile
   image: "absolve"
   tag: "2018-09"
+  platform: linux/amd64
