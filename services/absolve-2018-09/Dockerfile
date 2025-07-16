@@ -40,6 +40,6 @@ ENV	ABSOLVE_HMMFILE_SCFV=${ABSOLVE_HOME}/hmm/absolveSCFV.hmm \
     ABSOLVE_HMMFILE_HEAVY=${ABSOLVE_HOME}/hmm/absolveVH.hmm \
     ABSOLVE_HMMFILE_LIGHT=${ABSOLVE_HOME}/hmm/absolveVL.hmm
 
-RUN echo -e "#! /bin/sh\nexec /usr/local/absolve/absolve_rel \"\$@\"\n" >/usr/local/bin/absolve && \
+RUN echo "#! /bin/sh\nexec /usr/local/absolve/absolve_rel \"\$@\"\n" >/usr/local/bin/absolve && \
     chmod +x /usr/local/bin/absolve
 ENTRYPOINT /usr/local/absolve/absolve_rel
