@@ -17,7 +17,10 @@ parameters:
     media-type: application/fasta
 
 command:
-- GlobPipe
+- /usr/bin/env
+- "JALVIEW_PARSER_SCRIPT={{ runtime-path:scripts }}/jalview_parser.py"
+- bash
+- "{{ runtime-path:scripts }}/GlobPipe_wrapper.sh"
 
 args:
   input:
@@ -26,11 +29,17 @@ args:
 
 outputs:
   output:
-    path: stdout
+    path: output.txt
     media-type: text/plain
   error-log:
     path: stderr
     media-type: text/plain
+  jalview-annotations:
+    path: globplot.jvannot
+    media-type: application/jalview-annotations
+  jalview-features:
+    path: globplot.jvfeat
+    media-type: application/jalview-features
 
 tests:
 - applicable-runners: ["default"]
