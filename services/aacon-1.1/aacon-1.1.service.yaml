@@ -93,7 +93,10 @@ parameters:
     default: 0.1
 
 command:
-- aacon
+- /usr/bin/env
+- "JALVIEW_PARSER_SCRIPT={{ runtime-path:scripts }}/jalview_parser.py"
+- bash
+- "{{ runtime-path:scripts }}/aacon_wrapper.sh"
 
 args:
   input:
@@ -130,6 +133,9 @@ outputs:
   error-log:
     path: stderr
     media-type: text/plain
+  jalview-annotations:
+    path: aacon.jvannot
+    media-type: application/jalview-annotations
 
 tests:
 - applicable-runners: ["default"]
