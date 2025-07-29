@@ -20,7 +20,10 @@ classifiers:
 - Data::Alignment::Sequence alignment::RNA sequence alignment
 
 command:
-- RNAalifold
+- /usr/bin/env
+- "JALVIEW_PARSER_SCRIPT={{ runtime-path:scripts }}/jalview_parser.py"
+- bash
+- "{{ runtime-path:scripts }}/rnaalifold_wrapper.sh"
 
 args:
   endgaps:
@@ -193,6 +196,9 @@ outputs:
   pairing-matrix-plot:
     path: alidot.ps
     media-type: application/postscript
+  jalview-annotations:
+    path: rnaalifold.jvannot
+    media-type: application/jalview-annotations
 
 tests:
 - applicable-runners: ["default"]
