@@ -27,7 +27,10 @@ parameters:
     media-type: application/fasta
 
 command:
-- jronn
+- /usr/bin/env
+- "JALVIEW_PARSER_SCRIPT={{ runtime-path:scripts }}/jalview_parser.py"
+- bash
+- "{{ runtime-path:scripts }}/JRONN_wrapper.sh"
 
 args:
   input:
@@ -55,6 +58,9 @@ outputs:
   error-log:
     path: stderr
     media-type: text/plain
+  jalview-annotations:
+    path: jronn.jvannot
+    media-type: application/jalview-annotations
 
 tests:
 - applicable-runners: ["default"]
