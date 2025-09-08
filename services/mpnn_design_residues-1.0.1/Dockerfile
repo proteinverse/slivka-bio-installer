@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM --platform=linux/amd64 nvidia/cuda:11.8.0-base-ubuntu22.04
 ADD --chown=root:root --chmod=755 https://github.com/dauparas/ProteinMPNN.git#v1.0.1 /usr/local/ProteinMPNN
 
