@@ -19,12 +19,13 @@ parameters:
 command:
 - /usr/bin/env
 - "JALVIEW_PARSER_SCRIPT={{ runtime-path:scripts }}/jalview_parser.py"
-- bash
+- sh
 - "{{ runtime-path:scripts }}/DisEMBL_wrapper.sh"
 
 args:
   input:
     arg: $(value)
+    symlink: input.fa
 
 outputs:
   output:
