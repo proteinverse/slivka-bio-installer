@@ -359,6 +359,7 @@ args:
     default: output.fasta
   input:
     arg: -in $(value)
+    symlink: input.fa
   anchor:
     arg: -$(value)
   brenner:
