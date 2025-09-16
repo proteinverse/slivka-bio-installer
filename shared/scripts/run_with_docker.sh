@@ -10,7 +10,7 @@ do
 done
 
 docker_mount_args=()
-for link_file in $(find * -type link)
+for link_file in $(find * -type l)
 do
     link_target="$(readlink -f $link_file)"
     docker_mount_args+=(--mount "type=bind,src=$link_target,dst=$guest_workdir/$link_file,ro")
