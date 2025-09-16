@@ -31,6 +31,9 @@ done
 
 image=$1
 shift
+# The first argument is typically the binary to be run inside the container
+entrypoint=$1
+shift
 
 exec {BASH_XTRACEFD}>.docker.command
 set -o xtrace
@@ -39,4 +42,5 @@ exec docker run --rm \
     "${docker_mount_args[@]}" \
     "${docker_env_args[@]}" \
     --workdir "$guest_workdir" \
+    --entrypoint "$entrypoint" \
     -- "$image" "$@"
