@@ -462,6 +462,8 @@ class DockerInstaller:
         wrapper_script = os.path.join("${SLIVKA_HOME}", "scripts", "run_with_docker.sh")
         command_prefix = [
             shutil.which("env"),
+            # DOCKER_* variables are essential for "run_with_docker.sh" but slivka removes them
+            *(f"{k}={v}" for k, v in os.environ.items() if k.startswith("DOCKER_")),
             "bash",
             wrapper_script,
             *mount_args,
