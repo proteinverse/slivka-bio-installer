@@ -19,19 +19,28 @@ class TemplateYamlLoader(YAML):
     def __init__(self, mapping, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._mapping = mapping
-        self.Constructor.add_constructor('tag:yaml.org,2002:str', self.replace_placeholder)
+        self.Constructor.add_constructor(
+            "tag:yaml.org,2002:str", self.replace_placeholder
+        )
 
     def _match_repl(self, match):
         return self._mapping[match.group(1)]
 
     def replace_placeholder(self, loader, node):
         value = loader.construct_scalar(node)
-        return re.sub(r'\{\{ ?([\w\-]+:[\w\-\/\.]+) ?\}\}', self._match_repl, value)
+        return re.sub(r"\{\{ ?([\w\-]+:[\w\-\/\.]+) ?\}\}", self._match_repl, value)
 
 
 @click.command()
 @click.option("--conda-exe")
-@click.option("--service", "-s", "services", multiple=True, default=[''], show_default="all services")
+@click.option(
+    "--service",
+    "-s",
+    "services",
+    multiple=True,
+    default=[""],
+    show_default="all services",
+)
 @click.argument("path", type=Path)
 def main(conda_exe, services, path: Path):
     try:
@@ -69,12 +78,18 @@ def main(conda_exe, services, path: Path):
     copy_shared_files(path)
 
     for service_file in service_files:
-        base_name = service_file.name[:-len(".service.yaml")]
+        base_name = service_file.name[: -len(".service.yaml")]
         click.echo(f"Installing: {base_name}")
         applicable_installers = []
-        if service_file.with_name(f"{base_name}.conda.yaml").is_file() and conda_installer is not None:
+        if (
+            service_file.with_name(f"{base_name}.conda.yaml").is_file()
+            and conda_installer is not None
+        ):
             applicable_installers.append(conda_installer)
-        if service_file.with_name(f"{base_name}.docker.yaml").is_file() and docker_installer is not None:
+        if (
+            service_file.with_name(f"{base_name}.docker.yaml").is_file()
+            and docker_installer is not None
+        ):
             applicable_installers.append(docker_installer)
         if not applicable_installers:
             click.echo(f"No applicable installer for {base_name}")
@@ -91,7 +106,7 @@ def main(conda_exe, services, path: Path):
             ans = click.prompt(
                 f"Choose installer: {', '.join(installer_names)}",
                 type=click.Choice(choices, case_sensitive=False),
-                show_choices=False
+                show_choices=False,
             )
             if ans == "c":
                 installer = conda_installer
@@ -101,21 +116,22 @@ def main(conda_exe, services, path: Path):
                 installer_file = service_file.with_name(f"{base_name}.docker.yaml")
             try:
                 output_file = installer.install_service(installer_file, path)
-                click.echo(f"{click.style('Installed', fg='bright_green')}: {output_file.name}")
+                click.echo(
+                    f"{click.style('Installed', fg='bright_green')}: {output_file.name}"
+                )
                 break
             except Exception as e:
                 click.echo(f"{type(e).__name__}: {e}")
                 ans = click.prompt(
                     "[R]etry, [S]kip, [A]bort",
                     type=click.Choice("rsai", case_sensitive=False),
-                    show_choices=False
+                    show_choices=False,
                 )
-                if ans == 's':
-                    click.echo(click.style("Skipping", fg="yellow")+ f": {base_name}")
+                if ans == "s":
+                    click.echo(click.style("Skipping", fg="yellow") + f": {base_name}")
                     break
-                elif ans == 'a':
+                elif ans == "a":
                     raise click.Abort
-
 
 
 class DataFilesContextMap(dict):
@@ -142,15 +158,15 @@ def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
     :return: Set of relative paths matching the patterns
     """
     if not patterns:
-        patterns = [{'include': '*'}]
-    if 'include' not in patterns[0]:
-        patterns.insert(0, {'include': '*'})
+        patterns = [{"include": "*"}]
+    if "include" not in patterns[0]:
+        patterns.insert(0, {"include": "*"})
     matched = set()
     for rule in patterns:
         if len(rule) > 1:
             raise ValueError(f"Rule contains multiple keys: {rule}")
         key, val = next(iter(rule.items()))
-        if '**' in val or os.path.sep in val:
+        if "**" in val or os.path.sep in val:
             raise ValueError(f"Recursive globbing is not supported: {val}")
         if key == "include":
             operation = matched.add
@@ -162,7 +178,6 @@ def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
             if path.is_dir():
                 operation(path.relative_to(src_root))
     return matched
-
 
 
 def copy_data_dirs(copy_list: Iterable[tuple[Path, Path]]):
@@ -177,7 +192,9 @@ def copy_data_dirs(copy_list: Iterable[tuple[Path, Path]]):
     copied = []
     for src_path, dst_path in copy_list:
         if dst_path.exists():
-            if click.confirm(f"Directory exists: {dst_path}. Overwrite?", default=False):
+            if click.confirm(
+                f"Directory exists: {dst_path}. Overwrite?", default=False
+            ):
                 shutil.rmtree(dst_path)
             else:
                 click.echo(f"Skipping: {dst_path}")
@@ -187,7 +204,9 @@ def copy_data_dirs(copy_list: Iterable[tuple[Path, Path]]):
     return copied
 
 
-def find_and_copy_data_dirs(src_root: Path, patterns: list[dict], target_root: Path) -> list[tuple[Path, Path]]:
+def find_and_copy_data_dirs(
+    src_root: Path, patterns: list[dict], target_root: Path
+) -> list[tuple[Path, Path]]:
     """
     Find data directories under the given path matching the given patterns
     and copy them to the target root.
@@ -201,10 +220,7 @@ def find_and_copy_data_dirs(src_root: Path, patterns: list[dict], target_root: P
     :param Path target_root:
         Target directory to copy data directories to.
     """
-    files_mapping = [
-        (match, match)
-        for match in find_data_dirs(src_root, patterns)
-    ]
+    files_mapping = [(match, match) for match in find_data_dirs(src_root, patterns)]
     copy_data_dirs(
         (src_root / src_path, target_root / dst_path)
         for src_path, dst_path in files_mapping
@@ -212,7 +228,9 @@ def find_and_copy_data_dirs(src_root: Path, patterns: list[dict], target_root: P
     return files_mapping
 
 
-def copy_service_file(template_file: Path, target_root: Path, template_data: dict, prepend_command=[]):
+def copy_service_file(
+    template_file: Path, target_root: Path, template_data: dict, prepend_command=[]
+):
     yaml = TemplateYamlLoader(template_data)
     service_config = yaml.load(template_file)
     service_config["command"] = [*prepend_command, *service_config["command"]]
@@ -223,7 +241,9 @@ def copy_service_file(template_file: Path, target_root: Path, template_data: dic
 
 
 def interpolate_string(data: str, context: dict):
-    return re.sub(r'\{\{ ?([\w\-]+:[\w\/\.]+) ?\}\}', lambda m: context[m.group(1)], data)
+    return re.sub(
+        r"\{\{ ?([\w\-]+:[\w\/\.]+) ?\}\}", lambda m: context[m.group(1)], data
+    )
 
 
 def interpolate_list(data: list, context: dict):
@@ -258,7 +278,9 @@ class CondaEnvContextMap:
         if key == "env":
             return os.environ[name]
         if key == "which":
-            exe = shutil.which(name, path=f"{self.env_path}/bin{os.pathsep}{os.environ['PATH']}")
+            exe = shutil.which(
+                name, path=f"{self.env_path}/bin{os.pathsep}{os.environ['PATH']}"
+            )
             if not exe:
                 raise ValueError(f"Executable not found: {name}")
             return exe
@@ -283,7 +305,7 @@ class CondaInstaller:
         """
         config = yaml.load(install_file)
         # strip .conda.yaml suffix
-        base_name = install_file.name[:-len(".conda.yaml")]
+        base_name = install_file.name[: -len(".conda.yaml")]
 
         if "environment" in config:
             with tempfile.NamedTemporaryFile(suffix=".yaml") as env_file:
@@ -300,11 +322,9 @@ class CondaInstaller:
         copied_data_dirs = find_and_copy_data_dirs(
             src_root=install_file.parent,
             target_root=dst_data_dir,
-            patterns=config.get("files", [])
+            patterns=config.get("files", []),
         )
-        data_dirs_context = local_paths_context(
-            copied_data_dirs, dst_root=dst_data_dir
-        )
+        data_dirs_context = local_paths_context(copied_data_dirs, dst_root=dst_data_dir)
         runtime_data_dirs_context = runtime_paths_context(
             copied_data_dirs, dst_root=dst_data_dir
         )
@@ -314,7 +334,9 @@ class CondaInstaller:
         )
         vars_context = {
             f"var:{key}": val
-            for key, val in interpolate_dict(config.get("vars", {}), context_map).items()
+            for key, val in interpolate_dict(
+                config.get("vars", {}), context_map
+            ).items()
         }
         context_map.maps.insert(0, vars_context)
 
@@ -323,9 +345,8 @@ class CondaInstaller:
             template_file=install_file.with_name(f"{base_name}.service.yaml"),
             target_root=project_path,
             template_data=context_map,
-            prepend_command=command_prefix
+            prepend_command=command_prefix,
         )
-
 
     def create_env(self, env_name: str, env_file: Path):
         if not env_file.is_file():
@@ -385,27 +406,24 @@ class DockerEnvContextMap:
 
     def _populate_env_vars(self):
         output = subprocess.check_output(
-            [
-                self.docker_exe, "run",
-                "--rm", "--entrypoint", "env",
-                self.image_name
-            ],
-            text=True
+            [self.docker_exe, "run", "--rm", "--entrypoint", "env", self.image_name],
+            text=True,
         )
-        self._env_vars = dict(
-            line.split("=", 1) for line in output.splitlines()
-        )
+        self._env_vars = dict(line.split("=", 1) for line in output.splitlines())
 
     def get_which(self, prog_name):
         try:
             output = subprocess.check_output(
                 [
-                    self.docker_exe, "run",
-                    "--rm", "--entrypoint", "which",
+                    self.docker_exe,
+                    "run",
+                    "--rm",
+                    "--entrypoint",
+                    "which",
                     self.image_name,
-                    prog_name
+                    prog_name,
                 ],
-                text=True
+                text=True,
             )
         except subprocess.CalledProcessError as e:
             if e.returncode == 1:
@@ -422,7 +440,7 @@ class DockerInstaller:
     def install_service(self, install_file: Path, project_path: Path):
         config = yaml.load(install_file)
         # strip .docker.yaml suffix
-        base_name = install_file.name[:-len(".docker.yaml")]
+        base_name = install_file.name[: -len(".docker.yaml")]
         image_name = self._make_image(install_file.parent, config)
         env_context = DockerEnvContextMap(self.docker_exe, image_name)
 
@@ -430,11 +448,9 @@ class DockerInstaller:
         copied_data_dirs = find_and_copy_data_dirs(
             src_root=install_file.parent,
             target_root=dst_data_dir,
-            patterns=config.get("files", [])
+            patterns=config.get("files", []),
         )
-        data_dirs_context = local_paths_context(
-            copied_data_dirs, dst_root=dst_data_dir
-        )
+        data_dirs_context = local_paths_context(copied_data_dirs, dst_root=dst_data_dir)
         runtime_data_dirs_context = runtime_paths_context(
             copied_data_dirs, dst_root=Path("/data")
         )
@@ -444,7 +460,9 @@ class DockerInstaller:
         )
         vars_context = {
             f"var:{key}": val
-            for key, val in interpolate_dict(config.get("vars", {}), context_map).items()
+            for key, val in interpolate_dict(
+                config.get("vars", {}), context_map
+            ).items()
         }
         context_map.maps.insert(0, vars_context)
 
@@ -453,7 +471,7 @@ class DockerInstaller:
                 ("--mount", f"type=bind,src={dst_data_dir / p},dst=/data/{p},ro")
                 for _, p in copied_data_dirs
             ),
-            ()
+            (),
         )
         wrapper_script = os.path.join("${SLIVKA_HOME}", "scripts", "run_with_docker.sh")
         command_prefix = [
@@ -463,37 +481,33 @@ class DockerInstaller:
             "bash",
             wrapper_script,
             *mount_args,
-            image_name
+            image_name,
         ]
         return copy_service_file(
             template_file=install_file.with_name(f"{base_name}.service.yaml"),
             target_root=project_path,
             template_data=context_map,
-            prepend_command=command_prefix
+            prepend_command=command_prefix,
         )
-
 
     def _make_image(self, src_root: Path, config: dict):
         if "pull" in config:
             if isinstance(config["pull"], str):
-                return pull_docker_image(
-                    image_name=config["pull"]
-                )
+                return pull_docker_image(image_name=config["pull"])
             else:
                 return pull_docker_image(
                     image_name=config["pull"]["image"],
                     image_tag=config["pull"].get("tag"),
-                    platform=config["pull"].get("platform")
+                    platform=config["pull"].get("platform"),
                 )
         if "build" in config:
             return build_docker_image(
                 dockerfile=src_root / config["build"]["dockerfile"],
                 image_name=config["build"]["image"],
                 image_tag=config["build"].get("tag"),
-                platform=config["build"].get("platform")
+                platform=config["build"].get("platform"),
             )
         raise ValueError("No image specified in the config.")
-
 
 
 def build_docker_image(dockerfile: Path, image_name, image_tag=None, platform=None):
@@ -505,17 +519,18 @@ def build_docker_image(dockerfile: Path, image_name, image_tag=None, platform=No
         options.extend(["--platform", platform])
     proc = subprocess.run(
         [
-            "docker", "buildx", "build",
+            "docker",
+            "buildx",
+            "build",
             "--tag", full_tag,
             *options,
             "--file", dockerfile,
-            dockerfile.parent
+            dockerfile.parent,
         ],
-        cwd=dockerfile.parent
+        cwd=dockerfile.parent,
     )
     proc.check_returncode()
     return full_tag
-
 
 
 def pull_docker_image(image_name, image_tag=None, platform=None):
@@ -523,14 +538,7 @@ def pull_docker_image(image_name, image_tag=None, platform=None):
     options = []
     if platform:
         options.extend(["--platform", platform])
-    proc = subprocess.run(
-        [
-            "docker", "image", "pull",
-            *options,
-            "--quiet",
-            full_tag
-        ]
-    )
+    proc = subprocess.run(["docker", "image", "pull", *options, "--quiet", full_tag])
     proc.check_returncode()
     return full_tag
 
@@ -554,5 +562,5 @@ def copy_shared_files(target_root: Path):
                 click.echo(f"File exists: {target_file}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
