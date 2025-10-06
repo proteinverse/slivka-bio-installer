@@ -68,17 +68,13 @@ def main(conda_exe, services, path: Path):
     init_slivka(path)
     copy_shared_files(path)
 
-    available_installers = [
-        obj for obj in (conda_installer, docker_installer) if obj is not None
-    ]
-
     for service_file in service_files:
         base_name = service_file.name[:-len(".service.yaml")]
         click.echo(f"Installing: {base_name}")
         applicable_installers = []
-        if service_file.with_name(f"{base_name}.conda.yaml").is_file():
+        if service_file.with_name(f"{base_name}.conda.yaml").is_file() and conda_installer is not None:
             applicable_installers.append(conda_installer)
-        if service_file.with_name(f"{base_name}.docker.yaml").is_file():
+        if service_file.with_name(f"{base_name}.docker.yaml").is_file() and docker_installer is not None:
             applicable_installers.append(docker_installer)
         if not applicable_installers:
             click.echo(f"No applicable installer for {base_name}")
