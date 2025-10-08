@@ -95,8 +95,8 @@ def main(conda_exe, services, path: Path):
             click.echo(f"No applicable installer for {base_name}")
             continue
         while True:
-            installer_names = []
-            choices = []
+            installer_names = ["[s]kip"]
+            choices = ["s"]
             if conda_installer in applicable_installers:
                 installer_names.append("[c]onda")
                 choices.append("c")
@@ -108,6 +108,9 @@ def main(conda_exe, services, path: Path):
                 type=click.Choice(choices, case_sensitive=False),
                 show_choices=False,
             )
+            if ans == "s":
+                click.echo("Skipping")
+                break
             if ans == "c":
                 installer = conda_installer
                 installer_file = service_file.with_name(f"{base_name}.conda.yaml")
