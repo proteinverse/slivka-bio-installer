@@ -1,0 +1,8 @@
+files:
+- include: matrices
+- include: testdata
+
+build:
+  dockerfile: mafft-7.475.Dockerfile
+  image: mafft
+  tag: "7.475-debian"
