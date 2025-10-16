@@ -5,7 +5,6 @@ FROM debian:${DEBIAN_VERSION}-slim AS build
 ARG ABSOLVE_GIT_BRANCH=master
 
 RUN apt-get update && \
-    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends build-essential libz-dev cmake && \
 	apt-get clean
 
