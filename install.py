@@ -169,7 +169,7 @@ def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
         if len(rule) > 1:
             raise ValueError(f"Rule contains multiple keys: {rule}")
         key, val = next(iter(rule.items()))
-        if "**" in val or os.path.sep in val:
+        if "**" in val:
             raise ValueError(f"Recursive globbing is not supported: {val}")
         if key == "include":
             operation = matched.add
