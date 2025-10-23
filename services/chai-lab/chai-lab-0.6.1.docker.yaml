@@ -1,0 +1,4 @@
+build:
+   dockerfile: chai-lab-0.6.1.Dockerfile
+   image: chai-lab
+   tag: 0.6.1

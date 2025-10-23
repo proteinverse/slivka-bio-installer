@@ -1,0 +1,138 @@
+---
+slivka-version: "0.8.3"
+name: Chai-lab
+description:
+  Run Chai-1 to fold a complex.
+author: Chai Discovery
+version: "0.6.1"
+license: Apache 2.0
+classifiers: []
+
+command:
+- chai-lab
+- fold
+
+parameters:
+  input:
+    type: file
+    name: Input Fasta
+  
+  constraints:
+    type: file
+    name: Constraints
+    required: false
+  
+  no-use-esm-embeddings:
+    type: flag
+    name: Disable use of ESM Embeddings
+    default: false
+    required: false
+  
+  recycle-msa-subsample:
+    type: int
+    name: Recycle MSA Subsample
+    default: 0
+    required: false
+  
+  num-trunk-recycles:
+    type: int
+    name: Number of Trunk Recycles
+    default: 3
+    required: false
+  
+  num-diffn-timesteps:
+    type: int
+    name: Number of DiffN Timesteps
+    default: 200
+    required: false
+  
+  num-diffn-samples:
+    type: int
+    name: Number of DiffN Samples
+    default: 5
+    required: false
+  
+  num-trunk-samples:
+    type: int
+    name: Number of Trunk Samples
+    default: 1
+    required: false
+
+  seed:
+    type: int
+    name: Seed
+    required: false
+
+  use-msa-server:
+    type: flag
+    name: Use MSA Server
+    default: false
+    required: false
+
+args:
+  no-use-esm-embeddings:
+    arg: --no-use-esm-embeddings
+
+  constraints:
+    arg: --constraint-path $(value)
+    symlink: constraints.csv
+
+  recycle-msa-subsample:
+    arg: --recycle-msa-subsample $(value)
+
+  num-trunk-recycles:
+    arg: --num-trunk-recycles $(value)
+
+  num-diffn-timesteps:
+    arg: --num-diffn-timesteps $(value)
+
+  num-diffn-samples:
+    arg: --num-diffn-samples $(value)
+
+  num-trunk-samples:
+    arg: --num-trunk-samples $(value)
+
+  seed:
+    arg: --seed $(value)
+  
+  use-msa-server
+    arg: --use-msa-server
+
+  input:
+    arg: $(value)
+    symlink: input.fasta
+
+  _output_dir:
+    arg: $(value)
+    default: out
+
+outputs:
+  cif-prediction:
+    path: 'out/*.cif'
+    name: Predicted structure (CIF)
+    media-type: chemical/x-cif
+  pdb-predictions:
+    path: 'out/*.pdb'
+    name: Predicted structure (PDB)
+    media-type: chemical/x-pdb
+  npz-result:
+    path: 'out/*.npz'
+    name: Scores
+    media-type: application/x-npz
+  debug-logs:
+    path: "*.log"
+    name: Debug logs
+    media-type: text/plain
+  stdout:
+    path: stdout
+    name: Standard output
+    media-type: text/plain
+  stderr:
+    path: stderr
+    name: Standard error
+    media-type: text/plain
+
+execution:
+  runners:
+    default: !include _profiles.yaml::default-gpu
+...
