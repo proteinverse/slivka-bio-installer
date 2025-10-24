@@ -436,9 +436,12 @@ class DockerEnvContextMap:
 
 class DockerInstaller:
     def __init__(self):
-        self.docker_exe = shutil.which("docker")
-        if not self.docker_exe:
+        docker_exe = shutil.which("docker")
+        if not docker_exe:
+            docker_exe = shutil.which("podman")
+        if not docker_exe:
             raise FileNotFoundError("Docker not found.")
+        self.docker_exe: str = docker_exe
 
     def install_service(self, install_file: Path, project_path: Path):
         config = yaml.load(install_file)
@@ -504,7 +507,7 @@ class DockerInstaller:
                     platform=config["pull"].get("platform"),
                 )
         if "build" in config:
-            return build_docker_image(
+            return self.build_docker_image(
                 dockerfile=src_root / config["build"]["dockerfile"],
                 image_name=config["build"]["image"],
                 image_tag=config["build"].get("tag"),
@@ -513,27 +516,27 @@ class DockerInstaller:
         raise ValueError("No image specified in the config.")
 
 
-def build_docker_image(dockerfile: Path, image_name, image_tag=None, platform=None):
-    if not dockerfile.is_file():
-        raise FileNotFoundError(f"{dockerfile}")
-    full_tag = f"{image_name}:{image_tag}" if image_tag else image_name
-    options = []
-    if platform:
-        options.extend(["--platform", platform])
-    proc = subprocess.run(
-        [
-            "docker",
-            "buildx",
-            "build",
-            "--tag", full_tag,
-            *options,
-            "--file", dockerfile,
-            dockerfile.parent,
-        ],
-        cwd=dockerfile.parent,
-    )
-    proc.check_returncode()
-    return full_tag
+    def build_docker_image(self, dockerfile: Path, image_name, image_tag=None, platform=None):
+        if not dockerfile.is_file():
+            raise FileNotFoundError(f"{dockerfile}")
+        full_tag = f"{image_name}:{image_tag}" if image_tag else image_name
+        options = []
+        if platform:
+            options.extend(["--platform", platform])
+        proc = subprocess.run(
+            [
+                self.docker_exe,
+                "buildx",
+                "build",
+                "--tag", full_tag,
+                *options,
+                "--file", dockerfile,
+                dockerfile.parent,
+            ],
+            cwd=dockerfile.parent,
+        )
+        proc.check_returncode()
+        return full_tag
 
 
 def pull_docker_image(image_name, image_tag=None, platform=None):
