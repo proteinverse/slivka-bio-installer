@@ -1,0 +1,8 @@
+build:
+  dockerfile: Dockerfile
+  image: example-image
+  tag: v1.0
+
+vars:
+  example_var: "example_var_value"
+  example_home: "{{ env:EXAMPLE_HOME }}"
