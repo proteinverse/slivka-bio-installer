@@ -53,15 +53,19 @@ args:
   _VH:
     arg: --VH {{ runtime-path:dbs }}/$(value)
     default: human/VHv.aa.fa
+    symlink: VHv.aa.fa
   _JH:
     arg: --JH {{ runtime-path:dbs }}/$(value)
     default: human/VHj.aa.fa
+    symlink: VHj.aa.fa
   _VL:
     arg: --VL {{ runtime-path:dbs }}/$(value)
     default: human/VLv.aa.fa
+    symlink: VLv.aa.fa
   _JL:
     arg: --JL {{ runtime-path:dbs }}/$(value)
     default: human/VLj.aa.fa
+    symlink: VLj.aa.fa
   _output:
     arg: --outdir $(value)
     default: absolve
@@ -82,19 +86,19 @@ outputs:
     name: Germ-line matches
     media-type: text/tsv
   db-vh:
-    path: dbs/VHv.aa.fa
+    path: VHv.aa.fa
     name: VH database
     media-type: application/fasta
   db-jh:
-    path: dbs/VHj.aa.fa
+    path: VHj.aa.fa
     name: JH database
     media-type: application/fasta
   db-vl:
-    path: dbs/VLv.aa.fa
+    path: VLv.aa.fa
     name: VL database
     media-type: application/fasta
   db-jl:
-    path: dbs/VLj.aa.fa
+    path: VLj.aa.fa
     name: JL database
     media-type: application/fasta
 
