@@ -520,6 +520,9 @@ class DockerInstaller:
         if not dockerfile.is_file():
             raise FileNotFoundError(f"{dockerfile}")
         full_tag = f"{image_name}:{image_tag}" if image_tag else image_name
+        if subprocess.check_output([self.docker_exe, "image", "ls", "-q", full_tag]):
+            click.echo(f"Image already exists: {full_tag}. Skipping build.")
+            return full_tag
         options = []
         if platform:
             options.extend(["--platform", platform])
