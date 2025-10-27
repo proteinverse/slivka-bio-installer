@@ -57,7 +57,7 @@ def main(conda_exe, services, path: Path):
         docker_installer = None
         click.echo(f"Failed to init docker installer: {e}")
     else:
-        click.echo(f"Docker available")
+        click.echo(f"Docker available: '{docker_installer.docker_exe}'")
 
     service_files = [
         path
