@@ -1,5 +1,6 @@
 from collections import ChainMap
 import collections.abc
+import logging
 import os
 import re
 import shutil
@@ -41,8 +42,10 @@ class TemplateYamlLoader(YAML):
     default=[""],
     show_default="all services",
 )
+@click.option("--log-level", type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]), default="WARNING")
 @click.argument("path", type=Path)
-def main(conda_exe, services, path: Path):
+def main(conda_exe, services, log_level: str, path: Path):
+    logging.basicConfig(level=getattr(logging, log_level))
     try:
         conda_installer = CondaInstaller(conda_exe, path / "conda_env")
     except Exception as e:
@@ -114,9 +117,11 @@ def main(conda_exe, services, path: Path):
             if ans == "c":
                 installer = conda_installer
                 installer_file = service_file.with_name(f"{base_name}.conda.yaml")
-            if ans == "d":
+            elif ans == "d":
                 installer = docker_installer
                 installer_file = service_file.with_name(f"{base_name}.docker.yaml")
+            else:
+                raise ValueError(f"Invalid installer choice: {ans}") 
             try:
                 output_file = installer.install_service(installer_file, path)
                 click.echo(
@@ -152,7 +157,7 @@ def runtime_paths_context(paths, dst_root):
     return DataFilesContextMap(paths, dst_root, key_prefix="runtime-")
 
 
-def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
+def find_data_dirs(src_root: Path, patterns: list[dict]) -> collections.abc.Collection[Path]:
     """
     Find data directories under the given path matching the given patterns.
     If no patterns are specified, all directories are included.
@@ -160,12 +165,14 @@ def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
 
     :return: Set of relative paths matching the patterns
     """
+    logging.debug(f"Finding data dirs in {src_root}")
     if not patterns:
         patterns = [{"include": "*"}]
     if "include" not in patterns[0]:
         patterns.insert(0, {"include": "*"})
     matched = set()
     for rule in patterns:
+        logging.debug("Processing rule: %s", rule)
         if len(rule) > 1:
             raise ValueError(f"Rule contains multiple keys: {rule}")
         key, val = next(iter(rule.items()))
@@ -178,8 +185,13 @@ def find_data_dirs(src_root: Path, patterns: list[dict]) -> list[Path]:
         else:
             raise KeyError(f"Invalid rule: {key}")
         for path in src_root.glob(val):
+            logging.debug("Matched path: %s", path)
             if path.is_dir():
+                logging.debug(f"{key} %s", path.relative_to(src_root))
                 operation(path.relative_to(src_root))
+            else:
+                logging.info("Skipping non-directory path: %s", path)
+    logging.debug("Matched data dirs: %s", matched)
     return matched
 
 
@@ -194,6 +206,7 @@ def copy_data_dirs(copy_list: Iterable[tuple[Path, Path]]):
     """
     copied = []
     for src_path, dst_path in copy_list:
+        logging.info("Copying data from %s to %s", src_path, dst_path)
         if dst_path.exists():
             if click.confirm(
                 f"Directory exists: {dst_path}. Overwrite?", default=False
@@ -204,6 +217,7 @@ def copy_data_dirs(copy_list: Iterable[tuple[Path, Path]]):
                 continue
         shutil.copytree(src_path, dst_path)
         copied.append((src_path, dst_path))
+    logging.debug("Copied data directories: %s", copied)
     return copied
 
 
@@ -234,37 +248,40 @@ def find_and_copy_data_dirs(
 def copy_service_file(
     template_file: Path, target_root: Path, template_data: dict, prepend_command=[]
 ):
+    logging.info("Building service file: %s", template_file)
     yaml = TemplateYamlLoader(template_data)
     service_config = yaml.load(template_file)
     service_config["command"] = [*prepend_command, *service_config["command"]]
+    logging.debug("Service config: \n%s", service_config)
     (target_root / "services").mkdir(exist_ok=True)
     dest_file = target_root / "services" / template_file.name
     yaml.dump(service_config, dest_file)
+    logging.info("Service file created: %s", dest_file)
     return dest_file
 
 
-def interpolate_string(data: str, context: dict):
+def interpolate_string(data: str, context: collections.abc.Mapping):
     return re.sub(
         r"\{\{ ?([\w\-]+:[\w\/\.]+) ?\}\}", lambda m: context[m.group(1)], data
     )
 
 
-def interpolate_list(data: list, context: dict):
+def interpolate_list(data: collections.abc.Sequence, context: collections.abc.Mapping):
     return [
         interpolate_string(item, context) if isinstance(item, str) else
         interpolate_dict(item, context) if isinstance(item, collections.abc.Mapping) else
-        interpolate_list(item, context) if isinstance(item, collections.abc.Iterable) else
+        interpolate_list(item, context) if isinstance(item, collections.abc.Sequence) else
         item
         for item in data
     ]
 
 
-def interpolate_dict(data: dict, context: dict):
+def interpolate_dict(data: collections.abc.Mapping, context: collections.abc.Mapping):
     return {
         key: (
             interpolate_string(value, context) if isinstance(value, str) else
             interpolate_dict(value, context) if isinstance(value, collections.abc.Mapping) else
-            interpolate_list(value, context) if isinstance(value, collections.abc.Iterable) else
+            interpolate_list(value, context) if isinstance(value, collections.abc.Sequence) else
             value
         )
         for key, value in data.items()
@@ -292,6 +309,7 @@ class CondaEnvContextMap:
 
 class CondaInstaller:
     def __init__(self, conda_exe, conda_env_root: Path):
+        logging.debug(f"Initializing CondaInstaller with conda_exe={conda_exe}, conda_env_root={conda_env_root}")
         self.conda_exe = shutil.which(conda_exe) if conda_exe else detect_conda_exe()
         if not self.conda_exe:
             raise FileNotFoundError(f"Invalid conda exe: {conda_exe}")
@@ -395,26 +413,35 @@ class DockerEnvContextMap:
         self._env_vars = None
 
     def __getitem__(self, item):
+        logging.debug(f"DockerEnvContextMap __getitem__({item})")
         key, name = item.split(":", 1)
         if key == "env":
-            return self.get_env_var(name)
-        if key == "which":
-            return self.get_which(name)
-        raise KeyError(item)
+            value = self.get_env_var(name)
+        elif key == "which":
+            value = self.get_which(name)
+        else:
+            raise KeyError(item)
+        logging.debug("DockerEnvContextMap __getitem__(%s) = %s", item, value)
+        return value
 
     def get_env_var(self, name):
         if self._env_vars is None:
-            self._populate_env_vars()
+            self._env_vars = self._populate_env_vars()
         return self._env_vars[name]
 
     def _populate_env_vars(self):
+        logging.debug("Reading env vars for image: %s", self.image_name)
         output = subprocess.check_output(
             [self.docker_exe, "run", "--rm", "--entrypoint", "env", self.image_name],
             text=True,
         )
-        self._env_vars = dict(line.split("=", 1) for line in output.splitlines())
+        logging.debug("Env output:\n%s", output)
+        env_vars = dict(line.split("=", 1) for line in output.splitlines())
+        logging.debug("Parsed env vars: %s", env_vars)
+        return env_vars
 
     def get_which(self, prog_name):
+        logging.debug("Finding executable '%s' in image: %s", prog_name, self.image_name)
         try:
             output = subprocess.check_output(
                 [
@@ -430,8 +457,11 @@ class DockerEnvContextMap:
             )
         except subprocess.CalledProcessError as e:
             if e.returncode == 1:
-                raise ValueError(f"Executable not found: {prog_name}")
-        return output.strip()
+                raise FileNotFoundError(f"Executable not found: {prog_name}")
+            raise
+        path = output.strip()
+        logging.debug("Found executable '%s' at: %s", prog_name, path)
+        return path
 
 
 class DockerInstaller:
@@ -557,6 +587,7 @@ def init_slivka(slivka_path: Path):
 
 
 def copy_shared_files(target_root: Path):
+    logging.info("Copying shared files to %s", target_root)
     shared_dir = Path.cwd() / "shared"
     for root, dirs, files in os.walk(shared_dir):
         root = Path(root)
