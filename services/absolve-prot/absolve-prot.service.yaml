@@ -51,21 +51,17 @@ args:
     arg: --useAligner $(value)
     default: SWA
   _VH:
-    arg: --VH {{ runtime-path:dbs }}/$(value)
+    arg: --VH {{ runtime-path:dbs }}$(value)
     default: human/VHv.aa.fa
-    symlink: VHv.aa.fa
   _JH:
     arg: --JH {{ runtime-path:dbs }}/$(value)
     default: human/VHj.aa.fa
-    symlink: VHj.aa.fa
   _VL:
     arg: --VL {{ runtime-path:dbs }}/$(value)
     default: human/VLv.aa.fa
-    symlink: VLv.aa.fa
   _JL:
     arg: --JL {{ runtime-path:dbs }}/$(value)
     default: human/VLj.aa.fa
-    symlink: VLj.aa.fa
   _output:
     arg: --outdir $(value)
     default: absolve
