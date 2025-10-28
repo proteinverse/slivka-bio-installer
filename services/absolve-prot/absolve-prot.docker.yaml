@@ -1,6 +1,7 @@
 files:
 - include: testdata
 - include: dbs
+- include: scripts
 
 build:
   dockerfile: Dockerfile

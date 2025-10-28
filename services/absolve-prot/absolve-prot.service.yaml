@@ -35,8 +35,12 @@ parameters:
     description: Report multiple hits
     required: false
 
+env:
+  ABSOLVE_DBS: "{{ runtime-path:dbs }}/human"
+
 command:
-- absolve
+- bash
+- "{{ runtime-path:scripts }}/absolve_wrapper.sh"
 
 args:
   input:
@@ -51,17 +55,17 @@ args:
     arg: --useAligner $(value)
     default: SWA
   _VH:
-    arg: --VH {{ runtime-path:dbs }}$(value)
-    default: human/VHv.aa.fa
+    arg: --VH ${ABSOLVE_DBS}/$(value)
+    default: VHv.aa.fa
   _JH:
-    arg: --JH {{ runtime-path:dbs }}/$(value)
-    default: human/VHj.aa.fa
+    arg: --JH ${ABSOLVE_DBS}/$(value)
+    default: VHj.aa.fa
   _VL:
-    arg: --VL {{ runtime-path:dbs }}/$(value)
-    default: human/VLv.aa.fa
+    arg: --VL ${ABSOLVE_DBS}/$(value)
+    default: VLv.aa.fa
   _JL:
-    arg: --JL {{ runtime-path:dbs }}/$(value)
-    default: human/VLj.aa.fa
+    arg: --JL ${ABSOLVE_DBS}/$(value)
+    default: VLj.aa.fa
   _output:
     arg: --outdir $(value)
     default: absolve
@@ -82,19 +86,19 @@ outputs:
     name: Germ-line matches
     media-type: text/tsv
   db-vh:
-    path: VHv.aa.fa
+    path: dbs/VHv.aa.fa
     name: VH database
     media-type: application/fasta
   db-jh:
-    path: VHj.aa.fa
+    path: dbs/VHj.aa.fa
     name: JH database
     media-type: application/fasta
   db-vl:
-    path: VLv.aa.fa
+    path: dbs/VLv.aa.fa
     name: VL database
     media-type: application/fasta
   db-jl:
-    path: VLj.aa.fa
+    path: dbs/VLj.aa.fa
     name: JL database
     media-type: application/fasta
 
